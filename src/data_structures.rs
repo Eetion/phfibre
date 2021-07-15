@@ -19,6 +19,44 @@ fn lev_set_size< T >( v: Vec<T>, ind: usize ) {
     else { return v[ind] - v[ind-1] }
 }
 
+fn last_index< T > ( v: Vec<T> ) -> usize { v.len() - 1 }
+
+//  ---------------------------------------------------------------------------  
+//  SPARSE POINTERS 
+//  ---------------------------------------------------------------------------  
+
+#[derive(Clone, Debug)]
+struct LevelSetSizes{ pointers: Vec< usize > }
+
+impl LevelSetSizes{
+    
+    fn size( &self, set_index: usize ) -> usize {  
+        if set_index == 0 { self.pointers[0] }
+        else { self.pointers[ set_index ] - self.pointers[ set_index - 1 ] }
+    }
+
+    fn size_last( &self ) -> usize { self.set_size( self.pointers.len() - 1) }
+    
+    fn total( &self ) -> usize {
+        if self.pointers.is_empty() { 0 }
+        else { end_val( self.pointers ).clone() }
+    }
+    
+    fn postpend_empty_set( &self ) { 
+        if self.pointers.is_empty() { self.pointers.push(0) }
+        else { self.pointers.push( end_val(self.pointers) ) }
+    }
+
+    fn grow_last_set( &self ) {
+        self.pointers
+            [ last_index(self.pointers) ]  
+        =
+        self.pointers
+            [ last_index(self.pointers) ]  
+        + 1 
+    }
+}
+
 
 //  ---------------------------------------------------------------------------  
 //  ENTRIES 
@@ -121,32 +159,34 @@ struct EResults{
 //     class_crit:         bool 
 // }
 
-
+#[derive(Clone, Debug)]
 struct Node
 {
 
     boundary:           Vec< Vec< ( Cell, Val ) > >,
     bc_endpoint_now:    usize,
     
-    lev_set_sizes:      Vec< usize >,           // Kth value = # cells in Kth level set
+    lev_set_sizes:      LevelSetSizes,           // Kth value = # cells in Kth level set
+
+    lev_set_values:     Vec< Fil >,             // the function phi
     lev_set_is_crit:    bool,                   // true iff current level set contains a "critical cell"
     
-    cells_all:          Vec< ETotalComplex >,   // all cells
-    cell_ids_out:          Vec< usize >            // cells not yet assigned a birth,
+    cells_all:              Vec< ETotalComplex >,   // all cells
+    cell_ids_out:           Vec< Vec< usize > >           // cells not yet assigned a birth,
     
-    cell_ids_pos_crit:     Hash< (Fil, usize), Vec< usize > >,   // unmatched positive critical cells, grouped by (birth_time, dimension)
-    cell_ids_pos_degn:     Vec< usize >,           // unmatched positive degenerate cells
+    cell_ids_pos_crit:      HashSet< (Fil, usize, usize) >,   // unmatched positive critical cells, grouped by (birth_time, dimension)
+    cell_ids_pos_degn:      Vec< usize >,           // unmatched positive degenerate cells
                                                 // NB: doesn't need to be hash; we know birth time
-    bars_all_inf:       Vec< Fil >,
-    bars_all_fin:       Vec< (Fil, Fil) >,
+    bars_all_inf:           Vec< Fil >,
+    bars_all_fin:           Vec< (Fil, Fil) >,
     
-    bar_ids_dun_fin:       Vec< usize >,           // nonempty bars with all endpoints accounted for (finite)
-    bar_ids_dun_inf:       Vec< usize >,           // nonempty bars with all endpoints accounted for (infinite)
+    bar_ids_dun_fin:        Vec< usize >,           // nonempty bars with all endpoints accounted for (finite)
+    bar_ids_dun_inf:        Vec< usize >,           // nonempty bars with all endpoints accounted for (infinite)
     
-    bar_ids_und_fin:       Vec< usize >,           // nonempty bars with 1 endpoint left to account for 
+    bar_ids_und_fin:        Vec< usize >,           // nonempty bars with 1 endpoint left to account for 
 
-    bar_ids_now_inf:       Vec< usize >,           // bars still to match in this batch
-    bar_ids_now_fin:       Vec< usize >,           // bars still to match in this batch
+    bar_ids_now_inf:        Vec< usize >,           // bars still to match in this batch
+    bar_ids_now_fin:        Vec< usize >,           // bars still to match in this batch
 
 }
 
@@ -174,19 +214,20 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
     //  PUSH LEAF NODE TO RESULTS
 
-    if  node.lev_set_sizes.sum()  ==  node.all_cells.len() &&
-        node.bar_ids_dun_fin.len() == node.bars_all_fin.len() &&
-        node.bar_ids_dun_inf.len() == node.bar_ids_dun_inf.len() &&
-        node.class_size         == 0
+    if  node.lev_set_sizes.size_last()  ==  0
+        node.lev_set_sizes.total()      ==  node.all_cells.len() &&
+        node.bar_ids_dun_fin.len()      ==  node.bars_all_fin.len() &&
+        node.bar_ids_dun_inf.len()      ==  node.bars_all_inf.len() &&
         {
         results.push( node.cells_all.clone() ); 
     }
 
     //  TERMINATE CONSTRUCTION OF PRESENT LEVEL SET; INITIALIZE NEW LEVEL SET 
+    //  ---------------------------------------------------------------------
      
-    else if end_val(node.lev_set_sizes) != 0 &&     // current class is nonempty 
-            node.cell_ids_pos_degn.is_empty()   &&     // C-rule (degenerate) there are no unmatched "degenerate" positive cells
-            (                                       // C-rule (critical) 
+    else if node.lev_set_sizes.size_last() != 0     &&      // current class is nonempty 
+            node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
+            (                                           // C-rule (critical) 
                 ! node.lev_set_is_crit                  // the level set contains no "critical" cell
                 ||                                      // OR
                 (                                       // I_cur is empty
@@ -196,12 +237,14 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                 )
             )
         {
-        
+
         // CREATE CHILD NODE    
     
-        let mut child           =   node.clone();
-        child.lev_set_sizes.push(0);                // post-pend new entry (= 0) to vector of level set sizes
-        chile.lev_set_is_crit   =   false;          // this value remains false as long as the new level set remains empty
+        let mut child                   =   node.clone();
+
+        // APPEND NEW COUNTER FOR LEVEL SET SIZE
+
+        child.lev_set_sizes.postpend_empty();        // post-pend new entry (= 0) to vector of level set sizes
 
         // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
 
@@ -210,8 +253,12 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
         // produce an infinite loop, because we only reach this point after creating a new
         // nonempty level set.
 
-        if  child.lev_set_is_crit  { 
+        if  node.lev_set_is_crit  { 
 
+            // since we are creating a new level set, place child.lev_set_is_crit = false
+            // this value remains false as long as the new level set remains empty 
+            child.lev_set_is_crit       =   false;          
+            
             // update barcode endpoint
             child.bc_endpoint_now       +=  1;
 
@@ -228,6 +275,15 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
         }
 
+        // UPDATE FUNCTION f
+        
+        // note that we must ask whether the node level set is critical, since we have already
+        // declared the child level set to be degenerate
+        if      node.lev_set_is_crit  { child.f.push_crit() }
+        else    { child.f.push_degn() }
+
+        // RUN EXPLORE ON CHILD
+        
         results                 =   explore( child, results );
 
     
@@ -255,65 +311,69 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
     }
 
     //  ENLARGE LEVEL SET 
+    //  ---------------------------------------------------------------------
     else {
 
         //  ADD BIRTH CELL FOR AN *INFINITE* BAR 
+        //  ------------------------------------
         
-        for ind_bar_new in node.bar_ids_now_inf {
-
-            // update: 
-            //  lev_set_sizes 
-            //  cells_all
-            //  cell_ids_out 
-            //  bar_ids_dun 
-            //  bar_ids_now
+        for (bar_id_count, bar_id) in node.bar_ids_now_inf.iter().enumerate() { 
 
             // clone info about bar to be added
             let mut bar_new     =   node
                                         .bars_all_inf
-                                        [ind_bar_new]
+                                        [bar_id]
                                         .clone();  
 
             // loop over all cycles of appropriate dimension 
-            for ind_out in 0..node.cell_ids_out[ bar_new.dim ].len()
+            for (pos_id_out_count, pos_id_out) in node.cell_ids_out
+                                                    [ bar_new.dim  ]
+                                                    .iter()
+                                                    .enumerate()
                 .filter(    |x| 
-                            node.boundary
-                                [  
-                                    node.cell_ids_out
-                                        [ bar_new.dim ]
-                                        [ ind_out ]
-                                ]
-                            .is_empty()
+                            node.boundary[x.1]
+                                .is_empty()
                     )  
             {   
                 
+                // update: 
+                //  lev_set_sizes 
+                //  cells_all
+                //  cell_ids_out 
+                //  bar_ids_dun 
+                //  bar_ids_now
+
                 // create child node
-                let mut child   =   node.clone();                               // this must come before swap_remove
+                let mut child   =   node.clone();                                   // this must come before swap_remove
 
                 // mark child's level set as critical (posisbly redundantly)
                 child.lev_set_is_crit   =   true;
 
                 // move bar and positive cell
-                let mut cell    =   child.cell_ids_out.swap_remove(ind_out);       // remove cell from "out list"
-                let mut _       =   child.bar_ids_now_inf.swap_remove(ind_out);    // remove bar from "unadded list"
-                child.bar_ids_dun_inf.push( bar_new );                             // add bar to "done" list (consumes variable)
+                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                let _    =   child.bar_ids_now_inf.swap_remove(bar_id_count);       // remove bar from "unadded list"
+                child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
                
                 // record the birth ordinal of the added cell in the central registry
                 child
                     .cells_all
-                        [ cell ]
+                    [ pos_id_out ]
                     .birth
                                 =   end_val( child.lev_set_sizes );
                
                 // update number of cells born
-                end_val_mut( child.lev_set_sizes ) += 1; 
+                child.lev_set_sizes.grow_last_set();
 
+                // RUN EXPLORE ON CHILD
+                
+                results                 =   explore( child, results );
             }
         } 
         
         //  ADD BIRTH CELL FOR A *FINITE* BAR 
+        //  ------------------------------------
 
-        for ind_bar_new in node.bar_ids_now_fin_brn {
+        for (bar_id_count, bar_id) in node.bar_ids_now_fin_brn {
 
             // update: 
             //  lev_set_sizes 
@@ -324,20 +384,18 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
             // clone info about bar to be added
             let mut bar_new     =   node.bars_all_fin
-                                        [ind_bar_new]
+                                        [bar_id]
                                         .clone();  
 
             // loop over all cycles of appropriate dimension 
-            for ind_out in 0..node.cell_ids_out[ bar_new.dim ].len()
-                .filter(    |x| 
-                            node.boundary
-                                [  
-                                    node.cell_ids_out
-                                        [ bar_new.dim ]
-                                        [ ind_out ]
-                                ]
-                            .is_empty()
-                    )  
+            for (pos_id_out_count, pos_id_out) in node.cell_ids_out
+                                                    [ bar_new.dim ]
+                                                    .iter()
+                                                    .enumerate()
+                                                    .filter(    |x| 
+                                                                node.boundary[x.1]
+                                                                    .is_empty()
+                                                    )  
             {   
                 
                 // create child node
@@ -345,247 +403,262 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
                 // mark child's level set as critical (posisbly redundantly)
                 child.lev_set_is_crit   =   true;
+                
+                // move bar_id
+                let _    =   child.bar_ids_now_inf.swap_remove(bar_id_count);       // remove bar from list of bars that have unaccounted endpoints here
+                child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
 
-                // move the positive cell
-                let mut cell    =   child.cell_ids_out.swap_remove(ind_out);       // remove cell from "out list"
-                child.cell_ids_pos_crit
-                    .get_mut(
-                                ( child.bc_endpoint_now.clone(), bar_new.dim.clone() )
-                        )
-                    .push( cell );
-
-                // remove bar from list of bars that have unaccounted endpoints here
-                let mut _       =   child.bar_ids_now_fin.swap_remove(ind_bar_new);    // remove bar from "unadded list"
+                // move pos_id_out
+                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                
+                child.cell_ids_pos_crit.insert(
+                    pow_id_out 
+                    // ( 
+                    // bar_new.birth.clone(), 
+                    // bar_new.dim.clone(),
+                    // pos_id_out
+                    // )
+                )
                
                 // record the birth ordinal of the added cell in the central registry
                 child
                     .cells_all
-                        [ cell ]
+                    [ pos_id_out ]
                     .birth
-                                =   end_val( child.lev_set_sizes );
+                                =   child.lev_set_sizes.total();
                
                 // update number of cells born
-                end_val_mut( child.lev_set_sizes ) += 1; 
+                child.lev_set_sizes.grow_last_set(); 
+
+                // RUN EXPLORE ON CHILD
+                
+                results                 =   explore( child, results );
 
             }
         } 
         
-        //  ADD DEATH  CELL FOR A *FINITE* BAR 
+        //  ADD DEATH CELL FOR A *FINITE* BAR 
+        //  ------------------------------------
 
-        for ind_bar_new in node.bar_ids_now_fin_die {
-
-            // update: 
-            //  lev_set_sizes 
-            //  cells_all
-            //  cell_ids_out 
-            //  bar_ids_dun 
-            //  bar_ids_now
+        for (bar_id_count, bar_id) in node.bar_ids_now_fin_die {
 
             // clone info about bar to be added
             let mut bar_new     =   node.bars_all_fin
-                                        [ind_bar_new]
+                                        [bar_id]
                                         .clone();  
 
-            // loop over all cycles of appropriate dimension 
-            for ind_out in 0..node.cell_ids_out[ bar_new.dim ].len() {
+            // loop over all dimension (n+1) chains with nonzero boundary
+            for (neg_id_count, neg_id) in   node.cell_ids_out
+                                                [ bar_new.dim + 1 ]
+                                                .iter()
+                                                .enumerate()
+                                                .filter( |(i, x)| !node.boundary[x].is_empty() )
+            {
 
-                snz_ind_max     =   
-                                    node.boundary
-                                        [  
-                                            node.cell_ids_out
-                                                [ bar_new.dim ]
-                                                [ ind_out ]
-                                        ]
-                                    .iter()
-                                    .enumerate()
-                                    .max_by( 
-                                                |(x,y)| 
-                                                node.cells_all[ y.0 ].birth
-                                        )
+                // find the lowest nonzero entry in this column
+                let mut low_id      =    node.boundary
+                                                [ neg_id ]  
+                                                .iter()
+                                                .map( |x| x.0 )
+                                                .max()
+                                                .unwrap()   // we are guaranteed to get well-defined max, since we filtered out empty columns
+                                                .clone();
+
+                //   IF  every cell in the support of this column has been assigned a birth ordinal 
+                //  AND  low_id corresponds to a positive cell with the correct birth time
+                // THEN  add a positive critical cell
+                if  low_id < node.all_cells.len()   // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                    &&  
+                    node.cells_all[ low_id ].birth == Some(bar_new.birth)
+                    &&
+                    node.cell_ids_pos_crit
+                        .contains( low_id )
+                {
+
+                    // update: 
+                    //  lev_set_sizes 
+                    //  cells_all
+                    //  cell_ids_out 
+                    //  bar_ids_dun 
+                    //  bar_ids_now
+                    
+                    // create child node
+                    let mut child   =   node.clone();                                           // this must come before swap_remove
+
+                    // mark child's level set as critical (posisbly redundantly)
+                    child.lev_set_is_crit   =   true;
+
+                    // move cells
+                    let _           =   child.cell_ids_out.swap_remove(neg_id_count);           // remove negative cell from "out list"
+                    child.cell_ids_pos_crit.remove( low_id );                                   // remove positive cell from set of unmatched positive cells
+
+                    // move bar
+                    let _           =   child.bar_ids_now_fin_die.swap_remove(bar_id_count);    // remove bar from "unadded list"
+                    child.bar_ids_dun_fin.push( bar_id.clone() );                               // add bar to "done" list (consumes variable)
+
+                   
+                    // record the birth ordinal of the added cell in the central registry
+                    child
+                        .cells_all
+                        [ neg_id ]
+                        .birth
+                                    =   child.lev_set_sizes.total();
+                   
+                    // update number of cells born
+                    child.lev_set_sizes.grow_last_set(); 
+
+                    // record the pairing in the central registry
+                    child.cells_all
+                        [ low_id ]
+                        .bounding_cell_id
+                                    =   neg_id.clone();
 
 
+                    // UPDATE THE BOUNDARY MATRIX
+                    
+                    // clear bottom entries from columns
+                    //      !!! must insert code here !!! 
 
-                                        node.boundary
-                                            [  
-                                                node.cell_ids_out
-                                                    [ bar_new.dim ]
-                                                    [ ind_out ]
-                                            ]
+                    // deallocate the negative column (it's no longer needed)
+                    child.boundary
+                        [neg_id]
+                        .clear()
+                        .shrink_to_fit()
 
+                    // RUN EXPLORE ON CHILD
+                    
+                    results                 =   explore( child, results );
+                }
+            }
+        }
 
-                .filter(    |x| 
-                            node.boundary
-                                [  
-                                    node.cell_ids_out
-                                        [ bar_new.dim ]
-                                        [ ind_out ]
-                                ]
-                            .iter()
-                            .map( |x| 
-                                  node.cells_all
-                                    [x.0]
-                                    .birth
-                                )
-                            .empty_max_equals( bar_new.birth )
-                    )
+        //  ADD BIRTH CELL FOR A *DEGENERATE* BAR 
+        //  -------------------------------------
 
+        // loop over all dimensions
+        for dim in 0..node.cell_ids_out.len() {
+
+            // loop over all cycles of given dimension 
+            for (pos_id_out_count, pos_id_out) in node.cell_ids_out
+                                                    [ dim ]
+                                                    .iter()
+                                                    .enumerate()
+                                                    .filter(    |x| 
+                                                                node.boundary[x.1]
+                                                                    .is_empty()
+                                                    )  
             {   
                 
+                // update: 
+                //  lev_set_sizes 
+                //  cells_all
+                //  cell_ids_out 
+                //  bar_ids_dun 
+                //  bar_ids_now
+
                 // create child node
-                let mut child   =   node.clone();                               // this must come before swap_remove
+                let mut child   =   node.clone();                                   // this must come before swap_remove
 
-                // mark child's level set as critical (posisbly redundantly)
-                child.lev_set_is_crit   =   true;
 
-                // move the positive cell
-                let mut cell    =   child.cell_ids_out.swap_remove(ind_out);       // remove cell from "out list"
-                child.cell_ids_pos_crit
-                    .get_mut(
-                                ( child.bc_endpoint_now.clone(), bar_new.dim.clone() )
-                        )
-                    .push( cell );
-
-                // remove bar from list of bars that have unaccounted endpoints here
-                let mut _       =   child.bar_ids_now_fin.swap_remove(ind_bar_new);    // remove bar from "unadded list"
+                // move pos_id_out
+                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                child.cell_ids_pos_degn.push( pos_id_out );                         // add cell to list of positive degenerate cells
                
                 // record the birth ordinal of the added cell in the central registry
                 child
                     .cells_all
-                        [ cell ]
+                    [ pos_id_out ]
                     .birth
-                                =   end_val( child.lev_set_sizes );
+                                =   child.lev_set_sizes.total();
                
                 // update number of cells born
-                end_val_mut( child.lev_set_sizes ) += 1; 
+                child.lev_set_sizes.grow_last_set();
 
-            }
-        } 
-// -----------------------------------------------------------------------------------------
-        for ind_bar_new in node.bar_ids_now_fin_brn {
-
-            let mut bar_new     =   node
-                                        .bars_all
-                                        [ ind_bar_new ]
-                                        .clone();   
-            let mut pos_key     =   ( 
-                                        bar_new.left, 
-                                        bar_new.dim 
-                                    )
-
-            for ind_out in 0..node.cell_ids_out.len()
-                .filter(    |x| 
-                            node.boundary[  node.cell_ids_out[ ind_out ] ].is_empty() &&
-                            node.all_cells[ node.cell_ids_out[ ind_out ] ].dim == bar_new.dim     )
-
-                {
-                    let mut child   =   node.clone(); // this must come before swap_remove
-                    let cell        =   child.cell_ids_out.swap_remove(out_ind);
-
-                    if child.cell_ids_pos_crit.has_key(    ( 
-                                                        bar_new.left, 
-                                                        bar_new.dim 
-                                                        ) 
-                                                    ) 
-                    {
-                        chold.cell_ids_pos_crit.get_mut(
-                    }
-                    {
-                        child.cell_ids_pos_crit.push( cell.clone() ); // DO WE REALLY WANT TO DO THIS?
-                        // update: 
-                        //  lev_set_sizes
-                        //  cells_all
-                        //  cell_ids_out (already done)
-                        //  cell_ids_pos_crit (already done -- but do we want this?)
-                        //  bar_ids_dun (if bar never dies)
-                        //  bar_ids_und (if bar never dies)
-                        //  bars_all
-                        //  bar_ids_now
-                        //  class_size
-                    }
-                }
-            } 
-        }
-
-        for bar in node.bar_ids_now_end {
-            for cell in node.cell_ids_pos_crit.get(    (
-                                                    node.bc_endpoint_now,
-                                                    node.bars_all[ bar ]
-                                                        .dim()
-
-        }
-
-
-
-
-
-
-        for bar in node.bar_ids_now {
-            
-            //  ADD A BAR_DEATH CELL
-            if bar.birth_time  ==  node.bc_endpoint_now{
-                for out_ind in 0..node.cell_ids_out.len()
-                    .filter(    |x| 
-                                node.boundary[  node.cell_ids_out[ind] ].is_empty() &&
-                                node.all_cells[ node.cell_ids_out[ind] ].dim == bar.dim     )
-
-                    {
-                    let mut child   =   node.clone(); // this must come before swap_remove
-                    let cell    =   child.cell_ids_out.swap_remove(out_ind);
-                    child.cell_ids_pos_crit.push( cell.clone() ); // DO WE REALLY WANT TO DO THIS?
-                    // update: 
-                    //  lev_set_sizes
-                    //  cells_all
-                    //  cell_ids_out (already done)
-                    //  cell_ids_pos_crit (already done -- but do we want this?)
-                    //  bar_ids_dun (if bar never dies)
-                    //  bar_ids_und (if bar never dies)
-                    //  bars_all
-                    //  bar_ids_now
-                    //  class_size
-                }
-            } 
-
-            //  ADD A BAR_BITH CELL
-            else if bar.death_time == Some( node.bc_endpoint_now ) {
+                // RUN EXPLORE ON CHILD
                 
-                for cell_birth in node.cell_pos_crit { // ASK JACOB IF THIS FOR-LOOP IS OK
-                    if  {
-                            
-                    }
-                }
-                // STUFF
+                results         =   explore( child, results );
             }
-
-
         }
+        
+        //  ADD DEATH CELL FOR A *DEGENERATE* BAR 
+        //  -------------------------------------
 
-        for pos_degen in node.cell_ids_pos_degn {
-            // STUFF
-        }
+        // loop over all dimensions
+        for dim in 1..node.cell_ids_out.len() {
 
-        for cell in node.cell_ids_out
-                        .iter()
-                        .cloned()
-                        .filter(|x| node.boundary[ x ].is_empty() )
+            // loop over chains of given dimension with nonzero boundary
+            for (neg_id_count, neg_id) in   node.cell_ids_out
+                                                [ dim ]
+                                                .iter()
+                                                .enumerate()
+                                                .filter( |(i, x)| !node.boundary[x].is_empty() )
             {
-            // STUFF
+
+                // find the lowest nonzero entry in this column
+                let mut low_id      =   node.boundary
+                                            [ neg_id ]  
+                                            .iter()
+                                            .map( |x| x.0 )
+                                            .max()
+                                            .unwrap()   // we are guaranteed to get well-defined max, since we filtered out empty columns
+                                            .clone();
+
+                //   IF  every cell in the support of this column has been assigned a birth ordinal 
+                //  AND  low_id corresponds to a positive degenerate cell
+                // THEN  add a negative degenerate cell
+                if  low_id < node.all_cells.len() &&  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                    node.cell_ids_pos_degn.contains( low_id ) 
+                {
+
+                    // update: 
+                    //  lev_set_sizes 
+                    //  cells_all
+                    //  cell_ids_out 
+                    //  bar_ids_dun 
+                    //  bar_ids_now
+                    
+                    // create child node
+                    let mut child   =   node.clone();                                           // this must come before swap_remove
+
+                    // move cells
+                    let _           =   child.cell_ids_out.swap_remove(neg_id_count);           // remove negative cell from "out list"
+                    child.cell_ids_pos_degn.remove( low_id );                                   // remove positive cell from set of unmatched positive cells
+
+                    // record the birth ordinal of the added cell in the central registry
+                    child
+                        .cells_all
+                        [ neg_id ]
+                        .birth
+                                    =   child.lev_set_sizes.total();
+                   
+                    // update number of cells born
+                    child.lev_set_sizes.grow_last_set(); 
+
+                    // record the pairing in the central registry
+                    child.cells_all
+                        [ low_id ]
+                        .bounding_cell_id
+                                    =   neg_id.clone();
+
+                    // UPDATE THE BOUNDARY MATRIX
+                    
+                    // clear bottom entries from columns
+                    //      !!! must insert code here !!! 
+
+                    // deallocate the negative column (it's no longer needed)
+                    child.boundary
+                        [neg_id]
+                        .clear()
+                        .shrink_to_fit()
+
+                    // RUN EXPLORE ON CHILD
+                    
+                    results                 =   explore( child, results );
+                }
+            }
         }
     }
 
-
+    return results
 }
-
-// the added class is born in interval (-inf, birth_of_optimized_class]
-// AND
-// the added class dies in    interval (birth_of_optimized_class, death_of_optimized class)
-let condition_a =   chx.key_2_filtration(&index_birth)    <=  chx.key_2_filtration(&birth) &&
-                    chx.key_2_filtration(&index_death)    >   chx.key_2_filtration(&birth) &&
-                    chx.key_2_filtration(&index_death)    <   chx.key_2_filtration(&death) 
-
-// the added class is born strictly before the birth simplex (in lexicographic order) 
-// AND
-// the added class dies when the optimized class dies
-let condition_b =   index_birth                           <   birth                        && 
-                    chx.key_2_filtration(&index_death)    ==  chx.key_2_filtration(&death) 
-
 
