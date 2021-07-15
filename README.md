@@ -12,6 +12,7 @@
 
 # Debug / verification
 
+* write function to compute barcode, given equiv classes
 * write a simple program to test every permutation
     + generate all permutations
     + for each permutation:

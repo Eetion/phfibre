@@ -166,6 +166,9 @@ struct Node
     boundary:           Vec< Vec< ( Cell, Val ) > >,
     bc_endpoint_now:    usize,
     
+
+    bars_degn_quota:    Vec< usize >,
+
     lev_set_sizes:      LevelSetSizes,           // Kth value = # cells in Kth level set
 
     lev_set_values:     Vec< Fil >,             // the function phi
@@ -203,15 +206,23 @@ fn format_result( node: Node ) -> EResults
     
 }
 
+fn enumerate_compatible_filtrations( boundary, cells ) {
+   
+    //  PRECOMPUTE
+    //  compute: ranks of boundary operators (concomitantly, betti numbers)
+    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)
+
+    //  FEASIBILITY CHECK
+    //  check: #(inf bars of dimension dim) == betti_dim( total space )
+    //  check: #(fin bars of dimension dim) <= rank( total space )
+
+    //  INITIALIZE PARTIAL DATA
+    //  RUN THE EXPLORE ALGORITHM
+}
+
 fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 {
    
-    //  PRECOMPUTE SOME SIZES
-    //  ** ADD A CHECK TO MAKE SURE WE HAVE THE RIGHT NUMBER OF CELLS IN ALL DIMENSIONS
-    //          - CAN CALCULATE THIS RECURSIVELY STARTING WITH DIM 0
-    //  ** COULD ALSO DO AN INITIAL CHECK TO MAKE SURE HOMOLOGY OF LAST SPACE IN SEQUENCE IS
-    //  COMPATIBLE WITH THE BARCODE PROVIDED
-
     //  PUSH LEAF NODE TO RESULTS
 
     if  node.lev_set_sizes.size_last()  ==  0
@@ -538,6 +549,9 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
         // loop over all dimensions
         for dim in 0..node.cell_ids_out.len() {
 
+            // short-circuit if we have already met the quota for degenerate bars in this dimension
+            if node.bars_degn_quota[ dim ] == 0 { continue }
+
             // loop over all cycles of given dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
                                                     [ dim ]
@@ -571,8 +585,9 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                     .birth
                                 =   child.lev_set_sizes.total();
                
-                // update number of cells born
-                child.lev_set_sizes.grow_last_set();
+                // update counters
+                child.lev_set_sizes.grow_last_set();    // number of cells born
+                child.bar_degn_quota[dim] -= 1;         // drop the quota for degenerate bars by 1
 
                 // RUN EXPLORE ON CHILD
                 
@@ -585,6 +600,9 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
         // loop over all dimensions
         for dim in 1..node.cell_ids_out.len() {
+
+            // short-circuit if there exists no positive cell of appropriate dimension
+            if node.cell_ids_pos[ dim-1 ].is_empty() { continue }
 
             // loop over chains of given dimension with nonzero boundary
             for (neg_id_count, neg_id) in   node.cell_ids_out
