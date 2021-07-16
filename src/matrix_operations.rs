@@ -22,10 +22,13 @@ pub fn  clear_if_in< Key, Val, Ring > (
             ring:           Ring
         )
     where   Ring: Semiring + Ring + DivisionRing
+
 {
+   
     let entry_to_clear_opt  =   clearee
                                     .iter()
                                     .find( |&x| x.0 == pivot_entry.0 );
+   
     if let Some(entry_to_clear) = entry_to_clear_opt {
 
         scalar              =   ring.divide( 
