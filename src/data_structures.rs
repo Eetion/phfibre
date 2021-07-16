@@ -2,7 +2,7 @@
 
 
 type Cell = usize;
-type Val = Ratio< i64 >;
+type Coeff = Ratio< i64 >;
 type Fil = f64;
 
 
@@ -111,7 +111,7 @@ struct EResults{
 
 // struct Node
 // {
-//     boundary:           Vec< Vec< ( Cell, Val ) > >,
+//     boundary:           Vec< Vec< ( Cell, Coeff ) > >,
 //     num_cells_born    usize,
 //     bc_endpoint_now         usize,
 //     
@@ -133,7 +133,7 @@ struct EResults{
 
 // struct Node
 // {
-//     boundary:           Vec< Vec< ( Cell, Val ) > >,
+//     boundary:           Vec< Vec< ( Cell, Coeff ) > >,
 //     num_cells_born      usize,
 //     bc_endpoint_now        usize,
 // 
@@ -163,11 +163,12 @@ struct EResults{
 struct Node
 {
 
-    boundary:           Vec< Vec< ( Cell, Val ) > >,
-    bc_endpoint_now:    usize,
+    boundary:               Vec< Vec< ( Cell, Coeff ) > >,
+    boundary_buffer:        Vec< ( Cell, Coeff),
+    bc_endpoint_now:        usize,
     
 
-    bars_degn_quota:    Vec< usize >,
+    bars_degn_quota:        Vec< usize >,
 
     lev_set_sizes:      LevelSetSizes,           // Kth value = # cells in Kth level set
 

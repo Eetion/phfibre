@@ -11,6 +11,51 @@ type Key = usize;
 type Val = Ratio< i64 >;
 
 
+/// Clear an entry of the clearee, using the clearor.
+/// 
+/// Assumes that all structural nonzero entries are *actually* nonzero
+pub fn  clear_if_in< Key, Val, Ring > (
+            clearor:        Vec< (Key, Val) >,
+            clearee:        Vec< (Key, Val) >,
+            buffer:         Vec< (Key, Val) >,
+            pivot_entry:         (Key, Val),
+            ring:           Ring
+        )
+    where   Ring: Semiring + Ring + DivisionRing
+{
+    let entry_to_clear_opt  =   clearee
+                                    .iter()
+                                    .find( |&x| x.0 == pivot_entry.0 );
+    if let Some(entry_to_clear) = entry_to_clear_opt {
+
+        scalar              =   ring.divide( 
+                                    ring.negate( pivot_entry.1 ),
+                                    entro_to_clear.1
+                                );
+
+        merged              =   merge(
+                                    clearee.iter().cloned(),
+                                    clearor
+                                        .iter()
+                                        .cloned()
+                                        .scale_by( ring, scalar )
+                                )
+                                .simplify( ring );
+        buffer
+            .clear()
+            .extend( merged );
+
+        clearee
+            .clear()
+            .append(buffer);
+    }
+
+}
+
+
+
+
+
 
 pub fn column_pivot<I,R>(   matrix:             Vec< Vec< ( Key, Val ) > >,
                             piv_col:            Vec< ( Key, Val ) >,
