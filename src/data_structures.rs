@@ -1,52 +1,182 @@
 
-
+use crate::utilities::*;
+use num::rational::Ratio;
+use std::collections::{HashSet, HashMap};
+use std::iter::FromIterator;
+use ordered_float::OrderedFloat;
 
 type Cell = usize;
 type Coeff = Ratio< i64 >;
-type Fil = f64;
+type Fil = usize;
+type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
+
+
 
 
 //  ---------------------------------------------------------------------------  
-//  UTILITIES 
+//  BARCODES
 //  ---------------------------------------------------------------------------  
 
 
-fn end_val< T >( v: Vec<T> )  { (v[ v.len() - 1]).clone() }
-fn end_val_mut< T >( v: Vec<T> )  { (v[ v.len() - 1]) }
-
-fn lev_set_size< T >( v: Vec<T>, ind: usize ) {
-    if ind == 0 { return v[0] }
-    else { return v[ind] - v[ind-1] }
+#[derive(Clone, Debug)]
+struct FiniteBar { 
+    dim:        usize, 
+    birth:      Fil, 
+    death:      Fil 
 }
 
-fn last_index< T > ( v: Vec<T> ) -> usize { v.len() - 1 }
+#[derive(Clone, Debug)]
+struct InfiniteBar { 
+    dim:        usize, 
+    birth:      Fil 
+}
+
+#[derive(Clone, Debug)]
+struct Barcode {
+    inf:        Vec< InfiniteBar >,     // infinite bars (birth ordinals)
+    fin:        Vec< FiniteBar >,       // finite bars (birth/death ordinals)
+    ordinate:    OrdinalData< FilRaw >,            // struct converting endpoints to ordinals and vice versa
+}
+
+impl Barcode{
+    /// The maximum dimension of any bar in the barcode (None if the barcode is empty)
+    fn top_dim( &self ) -> Option< usize > { 
+        self.fin.iter().map(|&x| x.dim.clone())
+            .chain(
+                self.inf.iter().map(|&x| x.dim.clone())
+            )
+            .max()    
+    }
+    /// The maximum filtration (ordinal) of any bar in the barcode (None if the barcode is empty)
+    fn top_fil( &self ) -> Option< Fil > { 
+        self.fin.iter().map(|&x| x.death.clone())
+            .chain(
+                self.inf.iter().map(|&x| x.birth.clone())
+            )
+            .max()    
+    }    
+    /// Create a new barcode from raw parts
+    fn new( 
+        inf_brn:    Vec< FilRaw >,
+        inf_dim:    Vec< usize >,
+        fin_brn:    Vec< FilRaw >,
+        fin_die:    Vec< FilRaw >,
+        fin_dim:    Vec< usize >
+        ) 
+        -> 
+        Barcode 
+    {
+        let endpoints_raw_unordered   =   Vec::new();
+        endpoints_raw_unordered.append( &mut inf_brn.clone() );
+        endpoints_raw_unordered.append( &mut fin_brn.clone() );
+        endpoints_raw_unordered.append( &mut fin_die.clone() );
+
+        let raw_endpoint_ordinal_data   =   ordinate( &endpoints_raw_unordered );
+
+        let barcode     =   Barcode {
+                                inf:        Vec::new(),     // infinite bars (birth ordinals)
+                                fin:        Vec::new(),       // finite bars (birth/death ordinals)
+                                ordinate:   raw_endpoint_ordinal_data
+                            };
+                            
+        for bar_count in 0..fin_brn.len() {
+            let bar     =   FiniteBar { 
+                                dim:        fin_dim[ bar_count ],
+                                birth:      fin_brn[ bar_count ], 
+                                death:      fin_die[ bar_count ] 
+                            };        
+            barcode.fin.push( bar );
+        }
+        
+        for bar_count in 0..inf_brn.len() {
+            let bar     =   InfiniteBar { 
+                                dim:        inf_dim[ bar_count ],
+                                birth:      inf_brn[ bar_count ]
+                            };        
+            barcode.inf.push( bar );
+        }        
+
+        return barcode
+    }
+}
+
+/// 
+#[derive(Clone, Debug)]
+struct MapEndpoint2BarIDs {
+    inf:        Vec< Vec< usize > >,
+    fin_brn:    Vec< Vec< usize > >,
+    fin_die:    Vec< Vec< usize > >
+}
+
+/// Returns an object that maps an (ordinal) endpoints back to set of bar id's.
+fn  make_endpoint_to_barids_map(
+    barcode: Barcode
+    ) ->
+    MapEndpoint2BarIDs
+
+{
+    let mut endpoint__barids = MapEndpoint2BarIDs {
+        inf:        Vec::with_capacity(0),
+        fin_brn:    Vec::with_capacity(0),
+        fin_die:    Vec::with_capacity(0),
+    };    
+
+    if let Some( top_fil )  =  barcode.top_fil() {
+        for _ in 0..top_fil {
+            endpoint__barids.inf.push(      Vec::new()  );
+            endpoint__barids.fin_brn.push(  Vec::new()  );
+            endpoint__barids.fin_die.push(  Vec::new()  );                        
+        }
+    } 
+
+    // fill bins with infinite bars
+    for (bar_count, bar) in barcode.inf.iter().enumerate() {
+        endpoint__barids.inf[ bar.birth ].push( bar_count );
+    }
+
+    // fill bins with finite bars
+    for (bar_count, bar) in barcode.fin.iter().enumerate() {
+        endpoint__barids.fin_brn[ bar.birth ].push( bar_count );
+        endpoint__barids.fin_die[ bar.death ].push( bar_count );        
+    }
+
+    return endpoint__barids
+}
+
 
 //  ---------------------------------------------------------------------------  
-//  SPARSE POINTERS 
+//  LEVEL SET SIZES
 //  ---------------------------------------------------------------------------  
 
+
+/// A struct representing the sizes of a sequence of level sets.
 #[derive(Clone, Debug)]
 struct LevelSetSizes{ pointers: Vec< usize > }
 
 impl LevelSetSizes{
     
+    /// Size of the kth level set.
     fn size( &self, set_index: usize ) -> usize {  
         if set_index == 0 { self.pointers[0] }
         else { self.pointers[ set_index ] - self.pointers[ set_index - 1 ] }
     }
 
-    fn size_last( &self ) -> usize { self.set_size( self.pointers.len() - 1) }
+    /// Size of the last level set.
+    fn size_last( &self ) -> usize { self.size( self.pointers.len() - 1) }
     
+    /// Size of all level sets combined.
     fn total( &self ) -> usize {
         if self.pointers.is_empty() { 0 }
         else { end_val( self.pointers ).clone() }
     }
     
+    /// Add a size value for a new (empty) level set at the end.
     fn postpend_empty_set( &self ) { 
         if self.pointers.is_empty() { self.pointers.push(0) }
         else { self.pointers.push( end_val(self.pointers) ) }
     }
 
+    /// Add one to the size of the last level set.
     fn grow_last_set( &self ) {
         self.pointers
             [ last_index(self.pointers) ]  
@@ -59,159 +189,82 @@ impl LevelSetSizes{
 
 
 //  ---------------------------------------------------------------------------  
-//  ENTRIES 
+//  SEARCH TREE
 //  ---------------------------------------------------------------------------  
 
-
-struct EBarcodeTotal{
-    birth_time:     Fil,
-    death_time:     Fil,
-    birth_cell:     Option< Cell >,
-    death_cell:     Option< Cell >,
-    dim:            usize
-}
-
-
-struct ETotalComplex{
-    birth_order:    usize,
+#[derive(Clone, Debug)]
+struct CellEntry{
+    birth_ordinal:  usize,
     birth_class:    usize,
     birth_bar:      Option< usize >,
     death_bar:      Option< usize >,
     dim:            usize
 }
 
-
-// struct ETotalBarcode{
-//     birth_index:    usize,
-//     death_index:    Option< usize >,
-//     dim:            usize,
-// }
-// 
-// 
-// struct EPositiveCell{
-//     cell:           Cell,
-//     death_cells:    Vec< Cell >,
-//     interval:       Option< usize >, // uuid of the corresponding interval 
-// }
-
-
-struct EResults{
-    birth_class:    usize,
-    birth_order:    usize,
-    birth_itv:      Option< usize >,
-    death_itv:      Option< usize >
-}
-
-
-//  ---------------------------------------------------------------------------  
-//  CONTAINERS
-//  ---------------------------------------------------------------------------  
-
-
-
-// struct Node
-// {
-//     boundary:           Vec< Vec< ( Cell, Coeff ) > >,
-//     num_cells_born    usize,
-//     bc_endpoint_now         usize,
-//     
-//     cells_all:          Vec< ETotalComplex >,   // all cells
-//     cell_ids_out:          Vec< usize >            // cells not yet assigned a birth,
-//     cell_ids_pos_crit:     Vec< EPositiveCell >,   // unmatched positive critical cells
-//     cell_ids_pos_degn:     Vec< EPositiveCell >,   // unmatched positive degenerate cells
-// 
-//     bar_ids_dun:           Vec< usize >,           // bars with all endpoints accounted for
-//     bar_ids_und:           Vec< usize >,           // bars without all endpoints accounted for 
-//     bars_all:           Vec< ETotalBarcode>,    // all bars
-//     bar_ids_now:           Vec< usize >,           // bars still to match in this batch
-// 
-//     class_id:           usize,
-//     class_size:         usize,
-//     class_crit:         bool 
-// }
-
-
-// struct Node
-// {
-//     boundary:           Vec< Vec< ( Cell, Coeff ) > >,
-//     num_cells_born      usize,
-//     bc_endpoint_now        usize,
-// 
-//     cells_all:          Vec< ETotalComplex >,   // all cells
-//     cell_ids_out:          Vec< usize >            // cells not yet assigned a birth,
-//   
-//     bar_ids_crit_all:          Vec< BarPair >,     // all bars in desired barcode; 
-//     bar_ids_crit_needbirth:    Vec< usize >,       // bars not yet assigned a birth cell
-//     bar_ids_crit_needdeath:    Vec< usize >,       // bars assigned a birth cell but no death cell
-// 
-//     bar_ids_degn_all:          Vec< BarPair >,     // all degenerate bars 
-//     bar_ids_degn_needdeath:    Vec< usize >,       // bars assigned a birth cell but no death cell
-// 
-// 
-//     bar_ids_fut_crit:      Vec< usize >,           // bars without all endpoints accounted for 
-//     bar_ids_fut_degn:      Vec< usize >,           // bars without all endpoints accounted for 
-//     
-//     bar_ids_now_crit:      Vec< usize >,           // bars still to match in this batch
-//     bar_ids_now_degn:      Vec< usize >,           // bars still to match in this batch
-// 
-//     class_id:           usize,
-//     class_size:         usize,
-//     class_crit:         bool 
-// }
-
 #[derive(Clone, Debug)]
-struct Node
+struct Node<'a >
 {
 
     boundary:               Vec< Vec< ( Cell, Coeff ) > >,
-    boundary_buffer:        Vec< ( Cell, Coeff),
+    boundary_buffer:        Vec< ( Cell, Coeff) >,
     bc_endpoint_now:        usize,
     
-
     bars_degn_quota:        Vec< usize >,
 
-    lev_set_sizes:      LevelSetSizes,           // Kth value = # cells in Kth level set
+    lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
 
-    lev_set_values:     Vec< Fil >,             // the function phi
-    lev_set_is_crit:    bool,                   // true iff current level set contains a "critical cell"
+    lev_set_values:         Vec< Fil >,                     // the function phi
+    lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
     
-    cells_all:              Vec< ETotalComplex >,   // all cells
-    cell_ids_out:           Vec< Vec< usize > >           // cells not yet assigned a birth,
+    cells_all:              Vec< CellEntry >,           // all cells
+    cell_ids_out:           Vec< Vec< usize > >,            // cells not yet assigned a birth,
     
-    cell_ids_pos_crit:      HashSet< (Fil, usize, usize) >,   // unmatched positive critical cells, grouped by (birth_time, dimension)
-    cell_ids_pos_degn:      Vec< usize >,           // unmatched positive degenerate cells
-                                                // NB: doesn't need to be hash; we know birth time
+    cell_ids_pos_crit:      HashSet< (Fil, usize, usize) >, // unmatched positive critical cells, grouped by (birth_time, dimension)
+    cell_ids_pos_degn:      Vec< usize >,                   // unmatched positive degenerate cells
+                                                            // NB: doesn't need to be hash; we know birth time
     bars_all_inf:           Vec< Fil >,
     bars_all_fin:           Vec< (Fil, Fil) >,
     
-    bar_ids_dun_fin:        Vec< usize >,           // nonempty bars with all endpoints accounted for (finite)
-    bar_ids_dun_inf:        Vec< usize >,           // nonempty bars with all endpoints accounted for (infinite)
-    
-    bar_ids_und_fin:        Vec< usize >,           // nonempty bars with 1 endpoint left to account for 
+    bar_ids_dun_fin:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (finite)
+    bar_ids_dun_inf:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (infinite)
 
-    bar_ids_now_inf:        Vec< usize >,           // bars still to match in this batch
-    bar_ids_now_fin:        Vec< usize >,           // bars still to match in this batch
+    bar_ids_now_inf:        &'a Vec<Vec< usize >>,          // bars still to match in this batch
+    bar_ids_now_fin_brn:    &'a Vec<Vec< usize >>,          // bars to be born with this level set
+    bar_ids_now_fin_die:    &'a Vec<Vec< usize >>,          // bars to be bounded with this level set    
 
 }
 
 
 
 
+
+
+
 //  ---------------------------------------------------------------------------  
-//  FUNCTIONS 
+//  TOP LEVEL FUNCTIONS
 //  ---------------------------------------------------------------------------  
 
 
-fn format_result( node: Node ) -> EResults
+fn  enumerate_compatible_filtrations( 
+        boundary: Vec<Vec<Coeff>>, 
+        cell_registry: Vec<Cell>,
+        barcode_inf_births: Vec< Fil >,
+        barcode_fin_births: Vec< Fil >,
+        barcode_fin_deaths: Vec< Fil >                
+     ) 
 {
-    
-}
 
-fn enumerate_compatible_filtrations( boundary, cells ) {
+    //  -----------------------------------------------------------------------
+    //  PRECOMPUTE
+    //  -----------------------------------------------------------------------
+    
+    //  ID NUMS OF BARS ENDING AT EACH TIME POINT
+
    
     //  PRECOMPUTE
     //  compute: ranks of boundary operators (concomitantly, betti numbers)
     //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)
+    //  compute: bars that stop and start at each endpoint
 
     //  FEASIBILITY CHECK
     //  check: #(inf bars of dimension dim) == betti_dim( total space )
@@ -219,6 +272,8 @@ fn enumerate_compatible_filtrations( boundary, cells ) {
 
     //  INITIALIZE PARTIAL DATA
     //  RUN THE EXPLORE ALGORITHM
+
+
 }
 
 fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
@@ -226,11 +281,11 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
    
     //  PUSH LEAF NODE TO RESULTS
 
-    if  node.lev_set_sizes.size_last()  ==  0
-        node.lev_set_sizes.total()      ==  node.all_cells.len() &&
+    if  node.lev_set_sizes.size_last()  ==  0 &&
+        node.lev_set_sizes.total()      ==  node.cells_all.len() &&
         node.bar_ids_dun_fin.len()      ==  node.bars_all_fin.len() &&
-        node.bar_ids_dun_inf.len()      ==  node.bars_all_inf.len() &&
-        {
+        node.bar_ids_dun_inf.len()      ==  node.bars_all_inf.len()  
+    {
         results.push( node.cells_all.clone() ); 
     }
 
@@ -245,7 +300,7 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                 (                                       // I_cur is empty
                 node.bar_ids_now_inf.is_empty()     &&     
                 node.bar_ids_now_fin_brn.is_empty() &&    
-                node.bar_ids_now_fin_die.is_empty() &&   
+                node.bar_ids_now_fin_die.is_empty()    
                 )
             )
         {
@@ -256,7 +311,7 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
 
         // APPEND NEW COUNTER FOR LEVEL SET SIZE
 
-        child.lev_set_sizes.postpend_empty();        // post-pend new entry (= 0) to vector of level set sizes
+        child.lev_set_sizes.postpend_empty_set();        // post-pend new entry (= 0) to vector of level set sizes
 
         // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
 
@@ -275,14 +330,14 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
             child.bc_endpoint_now       +=  1;
 
             // update set of bars to account for
-            for bar in node.bars_all_inf.filter(|x| x.birth == child.bc_endpoint_now) {
-                child.bar_ids_now_inf.push( bar );
+            for bar in node.bars_all_inf.iter().filter(|&&x| x == child.bc_endpoint_now) {
+                child.bar_ids_now_inf.push( bar.clone() );
             }
-            for bar in node.bars_all_fin.filter(|x| x.birth == child.bc_endpoint_now) {
-                child.bar_ids_now_brn.push( bar );
+            for bar in node.bars_all_fin.iter().filter(|&&x| x.birth == child.bc_endpoint_now) {
+                child.bar_ids_now_brn.push( bar.clone() );
             }
-            for bar in node.bars_all_fin.filter(|x| x.death == child.bc_endpoint_now) {
-                child.bar_ids_now_die.push( bar );
+            for bar in node.bars_all_fin..iter().filter(|&&x| x.death == child.bc_endpoint_now) {
+                child.bar_ids_now_die.push( bar.clone() );
             }
 
         }
@@ -424,13 +479,13 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                 let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
                 
                 child.cell_ids_pos_crit.insert(
-                    pow_id_out 
+                    pos_id_out 
                     // ( 
                     // bar_new.birth.clone(), 
                     // bar_new.dim.clone(),
                     // pos_id_out
                     // )
-                )
+                );
                
                 // record the birth ordinal of the added cell in the central registry
                 child
@@ -535,7 +590,7 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                     child.boundary
                         [neg_id]
                         .clear()
-                        .shrink_to_fit()
+                        .shrink_to_fit();
 
                     // RUN EXPLORE ON CHILD
                     
@@ -668,7 +723,7 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
                     child.boundary
                         [neg_id]
                         .clear()
-                        .shrink_to_fit()
+                        .shrink_to_fit();
 
                     // RUN EXPLORE ON CHILD
                     
@@ -681,3 +736,172 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
     return results
 }
 
+
+//  ---------------------------------------------------------------------------  
+//  CHECK INTERSECTION OF POLYTOPES
+//  ---------------------------------------------------------------------------  
+
+
+struct Polytope {
+    data_l__fmin:    Vec< Fil >,    // function (level set ordinal) -> min possible filtration value
+    data_c__l:       Vec< usize >,     // function (cell id) -> level set ordinal
+}
+
+impl Polytope {
+
+    /// Number of cells in the underlying chain complex.
+    fn num_cells( &self ) -> usize { self.data_c__l.len() }
+
+    /// Number of level sets of the filter function.
+    fn num_lev_sets( &self ) -> usize { self.data_l__fmin.len() }    
+
+    /// Rightmost finite filtration value
+    fn max_filtration_value( &self ) -> Option<Fil> { self.data_l__fmin.iter().cloned().last() }
+
+    fn  c__l( &self, cell_id: usize ) -> Option<usize> { 
+        if cell_id >= self.num_cells() { return None } 
+        else {
+            return Some( self.data_c__l[ cell_id ].clone()  )
+        } 
+    }
+
+    fn  l__is_critical( &self, level_set_ordinal: usize ) -> Option<bool> { 
+        if level_set_ordinal >= self.num_lev_sets() { return None }
+        else if level_set_ordinal == 0 { return Some( true ) }
+        else if self.data_l__fmin[ level_set_ordinal ] 
+                == 
+                self.data_l__fmin[ level_set_ordinal -1 ] 
+        {
+            return Some( false )
+        }
+        else { return Some( true )}
+    }
+
+    fn  l__fmin( &self, level_set_ordinal: usize ) -> Option<Fil> { 
+        if level_set_ordinal >= self.num_lev_sets() { return None }
+        else {
+            return Some ( self.data_l__fmin[ level_set_ordinal ].clone() )            
+        }
+    }
+
+    // NB!!!!  If we assume that barcode endpoints are 0,1,..,N, then we can simplify
+    // computation of max filtration values considerably
+    fn  l__fmax( &self, level_set_ordinal: usize ) -> Option<Fil> { 
+
+        // Posit: the ordinal is within legal range
+        if let Some( is_critical ) = self.l__is_critical( level_set_ordinal.clone() )
+        {
+            // Posit: the level set ordinal IS critical.  Then max value equals min value.
+            if is_critical { return self.l__fmin( level_set_ordinal ) }
+            // Posit: the level set ordinal IS NOT not critical                
+            else {
+                let fmin                    =   self.l__fmin( 
+                                                        level_set_ordinal.clone() 
+                                                    )
+                                                    .unwrap();
+                if let Some( next_fil_val ) =   & self.data_l__fmin[
+                                                    level_set_ordinal.clone()..self.num_lev_sets()
+                                                    ]
+                                                        .iter()
+                                                        .map(|x| self.l__fmax(x.clone()).unwrap() )
+                                                        .filter(|&x| x > fmin)
+                                                        .next()
+                {
+                    return Some( next_fil_val.clone() )
+                } else {
+                    return Some( self.num_cells() )
+                }
+                                                    
+                // // Posit: this is the last legal level set ordinal
+                // // This implies that  not critical, and lies in open interval (0, max_legal_ordinal]
+                // if level_set_ordinal == self.num_lev_sets()-1 { 
+                //     return Some (self.max_filtration_value().unwrap() + 1 ) 
+                // } 
+                // // Posit: this is NOT the last legal ordinal
+                // // This implies that there is one above:
+                // else                 
+                // {
+                //     // SEARCH FORWARD FOR FIRST DISTINCT VALUE
+                //     return Some( self.data_l__fmin[ level_set_ordinal +1 ])
+                // }   
+            }
+        } 
+        else { return None }
+    }
+
+}
+
+
+struct PolytopeVertexSolver<'a> {
+    poly:           &'a Polytope,       // polytope to work with
+    c__fmin:     Vec< Fil >,         // function (cell id) -> min possible filtration value    
+    c__fmax:     Vec< Fil >,         // function (cell id) -> max possible filtration value
+}
+
+fn poly_2_polysolve<'a> ( poly: &'a Polytope ) -> PolytopeVertexSolver<'a>{
+
+    let num_cells       =   poly.c__l.len();
+    let num_levels      =   poly.l__fmin.len();    
+
+    let mut c__fmin  =   Vec::with_capacity( num_cells );
+    let mut c__fmax  =   Vec::with_capacity( num_cells );
+
+    // DEGENERATE CASES: 0 CELLS OR EXACTLY 1 LEVEL SET
+    if num_cells == 0 {
+        return PolytopeVertexSolver{ poly:poly, c__fmin:c__fmin, c__fmax:c__fmax}        
+    } else 
+    // this represents the case where there are 1 or more cells, but exactly 1 level set
+    // (in this case the level set must be critical, on account of the infinite dim-0 bar)
+    if num_levels == 1 {
+        for cell_id in 0..num_cells {
+            c__fmin.push(0);
+            c__fmax.push(0);
+        }
+        return PolytopeVertexSolver{ poly:poly, c__fmin:c__fmin, c__fmax:c__fmax}                
+    }
+
+    // REMAINING CASES: 
+    //      >= 1 cell           AND
+    //      >= 2 level sets 
+
+    // min filtration value for each cell is the min filtration value for its level set
+    c__fmin.extend(       
+        poly.c__l
+            .iter()
+            .map(
+                |&x| 
+                poly.l__fmin[ x ].clone()
+            )
+    );
+
+    // max filtration value for each cell is either (a) the min filtration value of the
+    // succeeding level set, or (b) infinity (realizes as # cells, which is strictly 
+    // greater than the index of any cell)
+
+    c__fmax.extend(  
+        poly.c__l[0..(num_cells-1)]
+            .iter()
+            .map( |&i|
+                poly.l__fmin[ i + 1 ]
+                .clone()
+            )     
+    );
+    
+
+    for cell_id in 0..num_cells {
+
+
+    }
+}
+
+
+fn check_intersection(
+    poly_a:     Polytope,
+    poly_b:     Polytope
+)
+
+{
+    // define solver a
+    let mut 
+    let mut solver_a    =   PolytopeVertexSolver{   poly: &poly_a, 2 }
+}
