@@ -100,7 +100,7 @@ impl Barcode{
     }
 }
 
-/// 
+/// Encodes a map sending (ordinal) endpoints to sets of bar id numbers.
 #[derive(Clone, Debug)]
 struct MapEndpoint2BarIDs {
     inf:        Vec< Vec< usize > >,
@@ -192,6 +192,9 @@ impl LevelSetSizes{
 //  SEARCH TREE
 //  ---------------------------------------------------------------------------  
 
+
+/// Represents an "entry" for a sincle cell within a central repository of 
+/// information about individual cells.
 #[derive(Clone, Debug)]
 struct CellEntry{
     birth_ordinal:  usize,
@@ -201,28 +204,28 @@ struct CellEntry{
     dim:            usize
 }
 
+/// Represents a node of the search tree.
 #[derive(Clone, Debug)]
 struct Node<'a >
 {
-
-    boundary:               Vec< Vec< ( Cell, Coeff ) > >,
-    boundary_buffer:        Vec< ( Cell, Coeff) >,
-    bc_endpoint_now:        usize,
+    boundary:               Vec< Vec< ( Cell, Coeff ) > >,  // boundary matrix reprsented as a vector of vectors
+    boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
+    bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
     
-    bars_degn_quota:        Vec< usize >,
+    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension
 
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
 
     lev_set_values:         Vec< Fil >,                     // the function phi
     lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
     
-    cells_all:              Vec< CellEntry >,           // all cells
+    cells_all:              Vec< CellEntry >,               // all cells
     cell_ids_out:           Vec< Vec< usize > >,            // cells not yet assigned a birth,
     
     cell_ids_pos_crit:      HashSet< (Fil, usize, usize) >, // unmatched positive critical cells, grouped by (birth_time, dimension)
     cell_ids_pos_degn:      Vec< usize >,                   // unmatched positive degenerate cells
                                                             // NB: doesn't need to be hash; we know birth time
-    bars_all_inf:           Vec< Fil >,
+    bars_all_inf:           Vec< Fil >,                     
     bars_all_fin:           Vec< (Fil, Fil) >,
     
     bar_ids_dun_fin:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (finite)
@@ -235,13 +238,8 @@ struct Node<'a >
 }
 
 
-
-
-
-
-
 //  ---------------------------------------------------------------------------  
-//  TOP LEVEL FUNCTIONS
+//  EXPLORE THE TREE
 //  ---------------------------------------------------------------------------  
 
 
@@ -273,10 +271,9 @@ fn  enumerate_compatible_filtrations(
     //  INITIALIZE PARTIAL DATA
     //  RUN THE EXPLORE ALGORITHM
 
-
 }
 
-fn explore( node: &mut Node, results: &mut Vec< Vec< ETotalComplex> > )
+fn explore( node: &mut Node, results: &mut Vec< Vec< CellEntry> > )
 {
    
     //  PUSH LEAF NODE TO RESULTS
