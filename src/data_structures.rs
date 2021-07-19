@@ -35,7 +35,7 @@ struct InfiniteBar {
 struct Barcode {
     inf:        Vec< InfiniteBar >,     // infinite bars (birth ordinals)
     fin:        Vec< FiniteBar >,       // finite bars (birth/death ordinals)
-    ordinate:    OrdinalData< FilRaw >,            // struct converting endpoints to ordinals and vice versa
+    ordinal:    OrdinalData< FilRaw >,            // struct converting endpoints to ordinals and vice versa
 }
 
 impl Barcode{
@@ -76,7 +76,7 @@ impl Barcode{
         let barcode     =   Barcode {
                                 inf:        Vec::new(),     // infinite bars (birth ordinals)
                                 fin:        Vec::new(),       // finite bars (birth/death ordinals)
-                                ordinate:   raw_endpoint_ordinal_data
+                                ordinal:    raw_endpoint_ordinal_data
                             };
                             
         for bar_count in 0..fin_brn.len() {
@@ -239,7 +239,7 @@ struct Node<'a >
 
 
 //  ---------------------------------------------------------------------------  
-//  EXPLORE THE TREE
+//  ENUMERATE POLYHEDRA
 //  ---------------------------------------------------------------------------  
 
 
@@ -252,26 +252,27 @@ fn  enumerate_compatible_filtrations(
      ) 
 {
 
-    //  -----------------------------------------------------------------------
     //  PRECOMPUTE
-    //  -----------------------------------------------------------------------
-    
-    //  ID NUMS OF BARS ENDING AT EACH TIME POINT
-
-   
-    //  PRECOMPUTE
-    //  compute: ranks of boundary operators (concomitantly, betti numbers)
-    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)
     //  compute: bars that stop and start at each endpoint
-
+   
     //  FEASIBILITY CHECK
+    //  compute: ranks of boundary operators (concomitantly, betti numbers)
+    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)    
     //  check: #(inf bars of dimension dim) == betti_dim( total space )
     //  check: #(fin bars of dimension dim) <= rank( total space )
 
     //  INITIALIZE PARTIAL DATA
-    //  RUN THE EXPLORE ALGORITHM
+
+    //  EXPLORE THE TREE
+    //  remove duplicate polyhedra as we go
 
 }
+
+
+//  ---------------------------------------------------------------------------  
+//  EXPLORE TREE
+//  ---------------------------------------------------------------------------  
+
 
 fn explore( node: &mut Node, results: &mut Vec< Vec< CellEntry> > )
 {
