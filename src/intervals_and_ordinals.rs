@@ -53,9 +53,8 @@ impl    < T >
 
 /// Get the ordinal data for the range of values taken by a vector of ordered floats
 pub fn ordinate( v: & Vec< OrderedFloat<f64> > ) -> OrdinalData< OrderedFloat< f64> > {
-    // let a   =   to_ordered_float(v);
-    let a   =   v.clone();
-    let b   =   HashMap::new();
+    let mut a       =   v.clone();
+    let mut b       =   HashMap::new();
     a.sort();       // sort entries
     a.dedup();      // remove duplicates
 
@@ -99,25 +98,25 @@ impl BarInfinite{
 
 #[derive(Clone, Debug)]
 pub struct Barcode {
-    inf:        Vec< BarInfinite >,     // infinite bars (birth ordinals)
-    fin:        Vec< BarFinite >,       // finite bars (birth/death ordinals)
-    ordinal:    OrdinalData< FilRaw >,            // struct converting endpoints to ordinals and vice versa
+    pub inf:        Vec< BarInfinite >,     // infinite bars (birth ordinals)
+    pub fin:        Vec< BarFinite >,       // finite bars (birth/death ordinals)
+    pub ordinal:    OrdinalData< FilRaw >,  // struct converting endpoints to ordinals and vice versa
 }
 
 impl Barcode{
     /// The maximum dimension of any bar in the barcode (None if the barcode is empty)
     pub fn top_dim( &self ) -> Option< usize > { 
-        self.fin.iter().map(|&x| x.dim.clone())
+        self.fin.iter().map(|x| x.dim.clone())
             .chain(
-                self.inf.iter().map(|&x| x.dim.clone())
+                self.inf.iter().map(|x| x.dim.clone())
             )
             .max()    
     }
     /// The maximum filtration (ordinal) of any bar in the barcode (None if the barcode is empty)
     pub fn top_fil( &self ) -> Option< Fil > { 
-        self.fin.iter().map(|&x| x.death.clone())
+        self.fin.iter().map(|x| x.death.clone())
             .chain(
-                self.inf.iter().map(|&x| x.birth.clone())
+                self.inf.iter().map(|x| x.birth.clone())
             )
             .max()    
     }    
@@ -135,7 +134,7 @@ impl Barcode{
         Barcode 
     {
         // place all endpoints into sequence
-        let endpoints_raw_unordered   =   Vec::new();
+        let mut endpoints_raw_unordered   =   Vec::new();
         endpoints_raw_unordered.append( &mut inf_brn.clone() );
         endpoints_raw_unordered.append( &mut fin_brn.clone() );
         endpoints_raw_unordered.append( &mut fin_die.clone() );
@@ -144,7 +143,7 @@ impl Barcode{
         let raw_endpoint_ordinal_data   =   ordinate( &endpoints_raw_unordered );
 
         // initialize barcode object
-        let barcode     =   Barcode {
+        let mut barcode     =   Barcode {
                                 inf:        Vec::new(),     // infinite bars (birth ordinals)
                                 fin:        Vec::new(),       // finite bars (birth/death ordinals)
                                 ordinal:    raw_endpoint_ordinal_data
@@ -241,7 +240,7 @@ impl MapEndpoint2BarIDs{
 //  ---------------------------------------------------------------------------  
 
 
-/// A struct representing the sizes of a sequence of level sets.
+/// A struct that calculates the sizes of a sequence of level sets.
 #[derive(Clone, Debug)]
 pub struct LevelSetSizes{ pointers: Vec< usize > }
 
@@ -257,25 +256,24 @@ impl LevelSetSizes{
     pub fn size_last( &self ) -> usize { self.size( self.pointers.len() - 1) }
     
     /// Size of all level sets combined.
-    pub fn total( &self ) -> usize {
-        if self.pointers.is_empty() { 0 }
-        else { end_val( self.pointers ).clone() }
+    pub fn num_cells_total( &self ) -> usize {
+        match end_val( & self.pointers ) { Some( val ) => val, None => 0  }
     }
     
     /// Add a size value for a new (empty) level set at the end.
-    pub fn postpend_empty_set( &self ) { 
-        if self.pointers.is_empty() { self.pointers.push(0) }
-        else { self.pointers.push( end_val(self.pointers) ) }
+    pub fn postpend_empty_set( & mut self ) { 
+        match end_val( & self.pointers ) { 
+            Some( val ) => self.pointers.push( val ) , 
+            None => self.pointers.push(0)
+        }        
     }
 
     /// Add one to the size of the last level set.
-    pub fn grow_last_set( &self ) {
-        self.pointers
-            [ last_index(self.pointers) ]  
-        =
-        self.pointers
-            [ last_index(self.pointers) ]  
-        + 1 
+    pub fn grow_last_set( & mut self ) {
+        match end_index( & self.pointers ) {
+            Some( i ) => self.pointers[ i ] += 1 ,
+            None => { panic!("There is no set to grow") }
+        }
     }
 }
 
@@ -289,8 +287,8 @@ impl LevelSetSizes{
 /// bounds on variable values.
 #[derive(Clone, Debug)]
 pub struct Polytope {
-    data_l__fmin:    Vec< Fil >,    // function (level set ordinal) -> min possible filtration value
-    data_c__l:       Vec< usize >,     // function (cell id) -> level set ordinal
+    data_l__fmin:       Vec< Fil >,         // function (level set ordinal) -> min possible filtration value
+    data_c__l:          Vec< usize >,       // function (cell id) -> level set ordinal
 }
 
 impl Polytope {
@@ -304,7 +302,7 @@ impl Polytope {
     /// Rightmost finite filtration value
     fn  max_filtration_value( &self ) -> Option<Fil> { self.data_l__fmin.iter().cloned().last() }
 
-    fn  cell__lev_set_ord( &self, cell_id: usize ) -> Option<usize> { 
+    fn  cell_id__lev_set_ord( &self, cell_id: usize ) -> Option<usize> { 
         if cell_id >= self.num_cells() { return None } 
         else {
             return Some( self.data_c__l[ cell_id ].clone()  )
@@ -339,7 +337,10 @@ impl Polytope {
     /// This function throws an error if the polytope contains no level sets.
     pub fn ensure_last_lev_set_critical( &mut self ) {
         if let Some( is_crit ) = self.lev_set_last__is_critical() {
-            if ! is_crit { * end_val_mut( self.data_l__fmin ) += 1 } // increasing the min filtration value will make the level set critical
+            if ! is_crit { 
+                let i   =   self.num_lev_sets()-1;
+                self.data_l__fmin[ i ] += 1; // increasing the min filtration value will make the level set critical            
+            }
         }
         else { panic!("there are no level sets, so cannot make last critical") } // happens if there *is* no last level set to make critical      
     }
@@ -390,27 +391,28 @@ impl Polytope {
     }
 
     /// Mainimum ordinal filtration value allowed for this cell.
-    fn  cell_id__fmin( &self, cell_id: usize ) -> Option<Fil> { 
-        if let Some( i ) = self.cell__lev_set_ord( cell_id ) { return self.lev_set_ord__fmin( i ) }
-        else { return None }
-        // self.cell__lev_set_ord( cell_id )
-        //     .map(   |x| 
-        //             self.lev_set_ord__fmin( x )
-        //                 .unwrap() 
-        //     )
+    pub fn  cell_id__fmin( &self, cell_id: usize ) -> Option<Fil> { 
+        match self.cell_id__lev_set_ord( cell_id ) {
+            Some( i )   =>  self.lev_set_ord__fmin( i ),
+            None        =>  None
+        }
     }
 
     /// Maximum ordinal filtration value allowed for this cell.
     fn  cell_id__fmax( &self, cell_id: usize ) -> Option<Fil> { 
-        if let Some( i ) = self.cell__lev_set_ord( cell_id ) { return self.lev_set_ord__fmax( i ) }
-        else { return None }
+        match self.cell_id__lev_set_ord( cell_id ) {
+            Some( i )   =>  self.lev_set_ord__fmax( i ),
+            None        =>  None
+        }
     }    
 
     pub fn push_new_lev_set( &mut self )   {
-        // if the vector of level set filtration values is nonempty, add a repeat of the last element
-        if let Some( fil_max ) = self.max_filtration_value() { return self.data_l__fmin.push( fil_max ) }
-        // otherwise the vector is empty, and we should append a 0
-        else { return self.data_l__fmin.push( 0 ) }
+        match self.max_filtration_value() {
+            // if the vector of level set filtration values is nonempty, add a repeat of the last element
+            Some( fil_max ) =>  self.data_l__fmin.push( fil_max ),
+            // otherwise the vector is empty, and we should append a 0
+            None            =>  self.data_l__fmin.push( 0 )
+        }
     }
 
 }
