@@ -17,15 +17,41 @@ type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not impleme
 
 
 
+
+
+
+
+
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TO DO 
+
+// INITIALIZE
+// FORMAT + STORE EACH RESULT 
+// 2X CHECK THE RECURSION
+// ADD THE MATRIX CLEARNING 
+// CHECK INTERSECTION 
+// CALCULATE STATISTICS ABOUT POLYTOPES
+
+
+
+
+
+
+
+
+
+
+
+
+
 //  ---------------------------------------------------------------------------  
-//  SEARCH TREE
+//  TREE NODE
 //  ---------------------------------------------------------------------------  
 
 
 /// Represents an "entry" for a sincle cell; raw data about cells is held in a
 /// central repository (a vector of these entries) within each node
 #[derive(Clone, Debug)]
-struct CellEntry{
+pub struct CellEntry{
     birth_ordinal:      usize,
     bounding_cell_id:   usize,
     dim:                usize,
@@ -67,6 +93,53 @@ struct Node<'a >
 
 }
 
+// impl <'a> Node<'a> {
+
+//     fn make_root(
+//         barcode:            Barcode,
+//         boundary:           Vec< Vec< (Cell, Coeff)>>,
+//     ) 
+//     -> 
+//     Node<'a> 
+//     {
+
+//         let boundary_buffer             =   Vec::new();
+//         let bc_endpoint_now             =   0;
+//         let 
+//         // Node<'a> {
+//         //     boundary:               Vec< Vec< ( Cell, Coeff ) > >,  // boundary matrix reprsented as a vector of vectors
+//         //     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
+//         //     bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
+            
+//         //     bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension
+        
+//         //     barcode:                Barcode,                        // the target barcode (contains useful ordinal data)
+//         //     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
+//         //     polytope:               Polytope,
+        
+//         //     lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
+            
+//         //     cells_all:              Vec< CellEntry >,               // all cells
+//         //     cell_ids_out:           Vec< Vec< usize > >,            // cells not yet assigned a birth,
+            
+//         //     cell_ids_pos_crit:      HashSet< usize >,               // unmatched positive critical cells, grouped by (birth_time, dimension)
+//         //     cell_ids_pos_degn:      HashSet< usize >,               // unmatched positive degenerate cells
+//         //                                                             // NB: doesn't need to be hash; we know birth time
+//         //     bars_all_inf:           Vec< BarInfinite >,                     
+//         //     bars_all_fin:           Vec< BarFinite >,
+            
+//         //     bar_ids_dun_fin:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (finite)
+//         //     bar_ids_dun_inf:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (infinite)
+        
+//         //     bar_ids_now_inf_brn:    Vec< usize >,                   // bars still to match in this batch
+//         //     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
+//         //     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
+        
+//         //     map_from_endpoints_to_barids:   &'a MapEndpoint2BarIDs, // pointer to a central register that maps bar endpoints to bar ids   
+//         // }        
+//     }
+// }
+
 
 //  ---------------------------------------------------------------------------  
 //  ENUMERATE POLYHEDRA
@@ -74,7 +147,7 @@ struct Node<'a >
 
 
 fn  enumerate_compatible_filtrations( 
-        boundary: Vec<Vec<Coeff>>, 
+        boundary: Vec<Vec< (Cell, Coeff) >>, 
         cell_registry: Vec<Cell>,
         barcode_inf_births: Vec< Fil >,
         barcode_fin_births: Vec< Fil >,
@@ -104,7 +177,7 @@ fn  enumerate_compatible_filtrations(
 //  ---------------------------------------------------------------------------  
 
 
-fn explore( node: &mut Node, results: &mut Vec< Vec< CellEntry> > )
+fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 {
    
     //  PUSH LEAF NODE TO RESULTS
@@ -114,7 +187,7 @@ fn explore( node: &mut Node, results: &mut Vec< Vec< CellEntry> > )
         node.bar_ids_dun_fin.len()              ==  node.bars_all_fin.len() &&
         node.bar_ids_dun_inf.len()              ==  node.bars_all_inf.len()  
     {
-        results.push( node.cells_all.clone() ); 
+        results.push( node.polytope.clone() ); 
     }
 
     //  TERMINATE CONSTRUCTION OF PRESENT LEVEL SET; INITIALIZE NEW LEVEL SET 
