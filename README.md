@@ -8,8 +8,6 @@
 
 * try exporting to Poly-make
 
-
-
 # Debug / verification
 
 * write function to compute barcode, given equiv classes
@@ -37,6 +35,6 @@
 ## Statistics to consider
 
 - betti numbers
-- # cells in each dimension
+- number of cells in each dimension
 - computation time / memory
 - is it a manifold?

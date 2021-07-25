@@ -1,2 +1,4 @@
 //pub mod matrix_operations;
-pub mod data_structures;
+pub mod phfibre;
+pub mod utilities;
+pub mod intervals_and_ordinals;

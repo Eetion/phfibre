@@ -1,4 +1,4 @@
-use phfibre::matrix_operations;
+use crate::phfibre;
 
 
 fn main() {
