@@ -1,6 +1,8 @@
 
 use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
+use crate::rank_calculations::*;
+use solar::reduce::vec_of_vec::{clear_cols};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
@@ -11,9 +13,7 @@ type Cell = usize;
 type Coeff = Ratio< i64 >;
 type Fil = usize;
 type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
-
-
-
+type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
 
 
@@ -25,16 +25,9 @@ type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not impleme
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TO DO 
 
 // INITIALIZE
-// FORMAT + STORE EACH RESULT 
-// 2X CHECK THE RECURSION
-// ADD THE MATRIX CLEARNING 
 // CHECK INTERSECTION 
 // CALCULATE STATISTICS ABOUT POLYTOPES
-
-
-
-
-
+// FUNCTION TO CHECK THAT BARCODE HAS BEEN COMPUTED CORRECTLY (IE COMPUTE BARCODE AFTER THE FACT, USING THE POLYHEDRON OBJECT)
 
 
 
@@ -59,17 +52,20 @@ pub struct CellEntry{
 
 /// Represents a node of the search tree.
 #[derive(Clone, Debug)]
-struct Node<'a >
+pub struct Node<'a >
 {
     boundary:               Vec< Vec< ( Cell, Coeff ) > >,  // boundary matrix reprsented as a vector of vectors
+    barcode:                &'a Barcode,                    // the target barcode (contains useful ordinal data)
+    barcode_inverse:        &'a BarcodeInverse,             // pointer to a central register that maps bar endpoints to bar ids       
+
+    ring:                   Ring,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
     bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
-    
-    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension
 
-    barcode:                Barcode,                        // the target barcode (contains useful ordinal data)
+    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension    
+
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
-    polytope:               Polytope,
+    polytope:               Polytope,    
 
     lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
     
@@ -79,8 +75,6 @@ struct Node<'a >
     cell_ids_pos_crit:      HashSet< usize >,               // unmatched positive critical cells, grouped by (birth_time, dimension)
     cell_ids_pos_degn:      HashSet< usize >,               // unmatched positive degenerate cells
                                                             // NB: doesn't need to be hash; we know birth time
-    bars_all_inf:           Vec< BarInfinite >,                     
-    bars_all_fin:           Vec< BarFinite >,
     
     bar_ids_dun_fin:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (finite)
     bar_ids_dun_inf:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (infinite)
@@ -89,56 +83,104 @@ struct Node<'a >
     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
 
-    map_from_endpoints_to_barids:   &'a MapEndpoint2BarIDs, // pointer to a central register that maps bar endpoints to bar ids   
-
 }
 
-// impl <'a> Node<'a> {
+impl <'a> Node<'a> {
 
-//     fn make_root(
-//         barcode:            Barcode,
-//         boundary:           Vec< Vec< (Cell, Coeff)>>,
-//     ) 
-//     -> 
-//     Node<'a> 
-//     {
+    pub fn make_root(   
+        boundary:               Vec< Vec< (Cell, Coeff)>>,
+        barcode:            &'a Barcode,
+        barcode_inverse:    &'a BarcodeInverse,        
+        cell_dims:          &   Vec< usize >,             
+    ) 
+    -> 
+    Node<'a> 
+    {
 
-//         let boundary_buffer             =   Vec::new();
-//         let bc_endpoint_now             =   0;
-//         let 
-//         // Node<'a> {
-//         //     boundary:               Vec< Vec< ( Cell, Coeff ) > >,  // boundary matrix reprsented as a vector of vectors
-//         //     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
-//         //     bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
-            
-//         //     bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension
+        let num_cells               =   cell_dims.len();
+        let ring                    =   Ring::new();        
+        let mut boundary_buffer     =   Vec::new();
+        let bc_endpoint_now         =   0;
+
+        // compute degenrate bar quotas
+        let ranks                   =   chain_cx_rank_nullity(
+                                            boundary.clone(), 
+                                            ring.clone(),
+                                            & cell_dims
+                                        );
+        let bars_degn_quota         =   degenerate_bar_quota(
+                                            & ranks,
+                                            & barcode
+                                        );
+        // level set sizes
+        let lev_set_sizes           =   LevelSetSizes{ pointers: Vec::new() };
+
+        // polytope
+        let polytope                =   Polytope{ 
+                                            data_l_to_fmin:   Vec::new(), 
+                                            data_c_to_l:      Vec::from_iter( 
+                                                                std::iter::repeat( num_cells )
+                                                                .take( num_cells )
+                                                            )
+                                        };
         
-//         //     barcode:                Barcode,                        // the target barcode (contains useful ordinal data)
-//         //     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
-//         //     polytope:               Polytope,
+        // all empty level sets are degenerate (i.e. not critical)
+        let lev_set_is_crit         =   false;
+
+        // cell registry
+        let mut cells_all           =   Vec::with_capacity( num_cells );
+        for dim in cell_dims {
+            cells_all.push( CellEntry{ 
+                                birth_ordinal: num_cells, 
+                                bounding_cell_id: num_cells, 
+                                dim: *dim } );
+        }
+
+        // cell_ids_out
+        let chain_dim_vec           =   ranks.rank_vec_chains();    // precompute sizes of component vectors
+        let mut cell_ids_out        =   Vec::new();                 // initialize empty sequence of vectors
+        for dim in chain_dim_vec {                                  // initialize constituent vectors
+            cell_ids_out.push( Vec::with_capacity(dim) )
+        }
+        for cell_id in 0..num_cells {                               // populate vectors
+            cell_ids_out[ cell_dims[ cell_id ] ].push( cell_id );
+        }
+
+
+
+        let mut cell_ids_pos_crit   =   HashSet::new();
+        let mut cell_ids_pos_degn   =   HashSet::new();        
+        let mut bar_ids_dun_fin     =   Vec::new();
+        let mut bar_ids_dun_inf     =   Vec::new();
+
+        let mut bar_ids_now_inf_brn    =   Vec::new();
+        let mut bar_ids_now_fin_brn    =   Vec::new();
+        let mut bar_ids_now_fin_die    =   Vec::new();
         
-//         //     lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
-            
-//         //     cells_all:              Vec< CellEntry >,               // all cells
-//         //     cell_ids_out:           Vec< Vec< usize > >,            // cells not yet assigned a birth,
-            
-//         //     cell_ids_pos_crit:      HashSet< usize >,               // unmatched positive critical cells, grouped by (birth_time, dimension)
-//         //     cell_ids_pos_degn:      HashSet< usize >,               // unmatched positive degenerate cells
-//         //                                                             // NB: doesn't need to be hash; we know birth time
-//         //     bars_all_inf:           Vec< BarInfinite >,                     
-//         //     bars_all_fin:           Vec< BarFinite >,
-            
-//         //     bar_ids_dun_fin:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (finite)
-//         //     bar_ids_dun_inf:        Vec< usize >,                   // nonempty bars with all endpoints accounted for (infinite)
-        
-//         //     bar_ids_now_inf_brn:    Vec< usize >,                   // bars still to match in this batch
-//         //     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
-//         //     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
-        
-//         //     map_from_endpoints_to_barids:   &'a MapEndpoint2BarIDs, // pointer to a central register that maps bar endpoints to bar ids   
-//         // }        
-//     }
-// }
+        Node { 
+            boundary:               boundary.clone(),
+            barcode:            &   barcode,
+            barcode_inverse:    &   barcode_inverse,
+            ring:                   ring.clone(),
+            boundary_buffer:        boundary_buffer,
+            bc_endpoint_now:        bc_endpoint_now,
+            bars_degn_quota:        bars_degn_quota,
+            lev_set_sizes:          lev_set_sizes,
+            polytope:               polytope,
+            lev_set_is_crit:        lev_set_is_crit,
+            cells_all:              cells_all,
+            cell_ids_out:           cell_ids_out,
+            cell_ids_pos_crit:      cell_ids_pos_crit,
+            cell_ids_pos_degn:      cell_ids_pos_degn,                            
+            bar_ids_dun_fin:        bar_ids_dun_fin,
+            bar_ids_dun_inf:        bar_ids_dun_inf,
+            bar_ids_now_inf_brn:    bar_ids_now_fin_brn,
+            bar_ids_now_fin_brn:    bar_ids_now_inf_brn,
+            bar_ids_now_fin_die:    bar_ids_now_fin_die
+        }     
+    }
+
+}
 
 
 //  ---------------------------------------------------------------------------  
@@ -177,23 +219,27 @@ fn  enumerate_compatible_filtrations(
 //  ---------------------------------------------------------------------------  
 
 
-fn explore( node: &mut Node, results: &mut Vec< Polytope > )
+pub fn explore( node: & Node, results: &mut Vec< Polytope > )
 {
    
     //  PUSH LEAF NODE TO RESULTS
 
-    if  node.lev_set_sizes.size_last()          ==  0 &&
+    if  node.lev_set_sizes.size_last()          ==  Some( 0 ) &&
         node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len() &&
-        node.bar_ids_dun_fin.len()              ==  node.bars_all_fin.len() &&
-        node.bar_ids_dun_inf.len()              ==  node.bars_all_inf.len()  
+        node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin() &&
+        node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf()
     {
-        results.push( node.polytope.clone() ); 
+        // we may have alread constructed an equivalent filtration (just with a different order
+        // on cells within a level set).  if we haven't then push to results.
+        if ! results.contains( & node.polytope ) {
+            results.push( node.polytope.clone() ); 
+        }
     }
 
     //  TERMINATE CONSTRUCTION OF PRESENT LEVEL SET; INITIALIZE NEW LEVEL SET 
     //  ---------------------------------------------------------------------
      
-    else if node.lev_set_sizes.size_last() != 0     &&      // current level set is nonempty 
+    else if node.lev_set_sizes.size_last() != Some( 0 ) &&  // current level set is nonempty 
             node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
             (                                               // C-rule (critical) 
                 ! node.lev_set_is_crit                          // the level set contains no "critical" cell
@@ -237,17 +283,17 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
             child.bc_endpoint_now       +=  1;
 
             // update set of bars to account for
-            child.bar_ids_now_inf_brn   =   child.map_from_endpoints_to_barids
+            child.bar_ids_now_inf_brn   =   child.barcode_inverse
                                                 .inf_brn
                                                 [ child.bc_endpoint_now ]
                                                 .clone();
 
-            child.bar_ids_now_fin_brn   =   child.map_from_endpoints_to_barids
+            child.bar_ids_now_fin_brn   =   child.barcode_inverse
                                                 .fin_brn
                                                 [ child.bc_endpoint_now ]
                                                 .clone();            
             
-            child.bar_ids_now_fin_die   =   child.map_from_endpoints_to_barids
+            child.bar_ids_now_fin_die   =   child.barcode_inverse
                                                 .fin_die
                                                 [ child.bc_endpoint_now ]
                                                 .clone();                        
@@ -256,7 +302,7 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
         // RUN EXPLORE ON CHILD
         
-        explore( &mut child, results );
+        explore( & child, results );
         
     }
 
@@ -271,9 +317,8 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
             // clone info about bar to be added
             let mut bar_new     =   node
-                                        .bars_all_inf
-                                        [bar_id]
-                                        .clone();  
+                                        .barcode
+                                        .bar_inf( bar_id );  
 
             // loop over all cycles of appropriate dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -317,7 +362,7 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
                 // RUN EXPLORE ON CHILD
                 
-                explore( & mut child, results );
+                explore( & child, results );
             }
         } 
         
@@ -334,9 +379,8 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
             //  bar_ids_now
 
             // clone info about bar to be added
-            let mut bar_new     =   node.bars_all_fin
-                                        [bar_id]
-                                        .clone();  
+            let mut bar_new     =   node.barcode
+                                        .bar_fin( bar_id );
 
             // loop over all cycles of appropriate dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -384,7 +428,7 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
                 // RUN EXPLORE ON CHILD
                 
-                explore( & mut child, results );
+                explore( & child, results );
 
             }
         } 
@@ -399,9 +443,8 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
         for (bar_id_count, bar_id) in node.bar_ids_now_fin_die.iter().cloned().enumerate() {
 
             // clone info about bar to be added
-            let mut bar_new     =   node.bars_all_fin
-                                        [bar_id]
-                                        .clone();  
+            let mut bar_new     =   node.barcode
+                                        .bar_fin( bar_id );
 
             // loop over all dimension (dim+1) chains
             for (neg_id_count, neg_id) in   node.cell_ids_out
@@ -430,7 +473,7 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
                 // THEN  add a positive critical cell
                 if  low_id < node.cells_all.len()   // this first condition helps to short circuit / avoid expensive look-ups in the hash set
                     &&  
-                    node.polytope.cell_id__fmin( low_id.clone() ).unwrap() == bar_new.birth()
+                    node.polytope.cell_id_to_fmin( low_id.clone() ).unwrap() == bar_new.birth()
                     &&
                     node.cell_ids_pos_crit
                         .contains( & low_id )
@@ -476,17 +519,33 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
 
                     // UPDATE THE BOUNDARY MATRIX
-                    
-                    // clear bottom entries from columns
-                    //      !!! must insert code here !!! 
+
+                    // define the ingredients for clearing
+                    let clearor     =   child.boundary[ neg_id ].clone();
+                    let pivot_entry =   clearor.last().unwrap();
+                    let ring        =   Ring::new();
 
                     // deallocate the negative column (it's no longer needed)
                     child.boundary[ neg_id ].clear();
-                    child.boundary[ neg_id ].shrink_to_fit();                    
+                    child.boundary[ neg_id ].shrink_to_fit();    
+
+                    // clear bottom entries from columns                    
+                    clear_cols(
+                        &       clearor,
+                        & mut   child.boundary,
+                                child.cell_ids_out
+                                    [ bar_new.dim() +1 ]  // only columns indexed by cells of degree dim+1 could be changed
+                                    .clone(),
+                        &       pivot_entry,
+                                ring
+                    );
+                    
+                    
+
 
                     // RUN EXPLORE ON CHILD
                     
-                    explore( & mut child, results );
+                    explore( & child, results );
                 }
             }
         }
@@ -540,7 +599,7 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
 
                 // RUN EXPLORE ON CHILD
                 
-                explore( &mut child, results );
+                explore( & child, results );
             }
         }
         
@@ -614,17 +673,30 @@ fn explore( node: &mut Node, results: &mut Vec< Polytope > )
                                     =   neg_id.clone();
 
                     // UPDATE THE BOUNDARY MATRIX
-                    
-                    // clear bottom entries from columns
-                    //      !!! must insert code here !!! 
+
+                    // define the ingredients for clearing
+                    let clearor     =   child.boundary[ neg_id ].clone();
+                    let pivot_entry =   clearor.last().unwrap();
+                    let ring        =   Ring::new();
 
                     // deallocate the negative column (it's no longer needed)
                     child.boundary[ neg_id ].clear();
-                    child.boundary[ neg_id ].shrink_to_fit();   
+                    child.boundary[ neg_id ].shrink_to_fit();    
+
+                    // clear bottom entries from columns                    
+                    clear_cols(
+                        &       clearor,
+                        & mut   child.boundary,
+                                child.cell_ids_out
+                                    [ dim ]
+                                    .clone(),
+                        &       pivot_entry,
+                                ring
+                    );
 
                     // RUN EXPLORE ON CHILD
                     
-                    explore( & mut child, results );
+                    explore( & child, results );
                 }
             }
         }
