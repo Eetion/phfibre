@@ -1,4 +1,5 @@
 use crate::utilities::*;
+use solar::utilities::index::SuperVec;
 use ordered_float::OrderedFloat;
 use num::rational::Ratio;
 use std::collections::{HashMap};
@@ -98,9 +99,9 @@ impl BarInfinite{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Barcode {
-    pub inf:        Vec< BarInfinite >,     // infinite bars (birth ordinals)
-    pub fin:        Vec< BarFinite >,       // finite bars (birth/death ordinals)
-    pub ordinal:    OrdinalData< FilRaw >,  // struct converting endpoints to ordinals and vice versa
+    pub inf:            Vec< BarInfinite >,     // infinite bars (birth ordinals)
+    pub fin:            Vec< BarFinite >,       // finite bars (birth/death ordinals)
+    pub ordinal:        OrdinalData< FilRaw >,  // struct converting endpoints to ordinals and vice versa
 }
 
 impl Barcode{
@@ -124,17 +125,21 @@ impl Barcode{
     }
 
     /// Returns a vector `v` such that `v[i] = #{bars of degree i}`
-    pub fn num_bars_fin_per_dim( &self ) -> Vec< usize > { 
-        // create vector filled with 0's
-        let mut counts      =   Vec::from_iter(
-                                    std::iter::repeat(0)
-                                    .take(
-                                        self.top_bar_degree().unwrap() + 1  // why +1?  consider the case where top_bar_degree = 0
-                                    ) 
-                                ); 
-        // with_capacity( self.top_bar_degree().unwrap() +1 ); 
-        for bar in & self.fin { counts[ bar.dim() ] += 1 }
-        counts
+    /// 
+    /// The length of `v` is (top_chain_degree + 1), since it's important to be able to 
+    pub fn num_bars_fin_per_dim( &self ) -> SuperVec< usize > { 
+
+        let mut counts          =   Vec::with_capacity( 0 );
+
+        // if there are any bars in the barcode, count them
+        if let Some( d ) = self.top_bar_degree() {
+            let mut counts      =   Vec::with_capacity( d );
+            for _ in 0..d+1 { counts.push(0) }
+            for bar in & self.fin { counts[ bar.dim() ] += 1 }        
+        }
+
+        SuperVec{ vec: counts, val: 0 }
+
     }    
 
     /// Number of finite bars
@@ -311,6 +316,13 @@ impl LevelSetSizes{
         match end_index( & self.pointers ) {
             Some( i ) => self.pointers[ i ] += 1 ,
             None => { panic!("There is no set to grow") }
+        }
+    }
+
+    pub fn last_level_set_ordinal( &self ) -> Option< usize > {
+        match self.pointers.is_empty() {
+            true    =>  None,
+            false   =>  Some( self.pointers.len() -1 )
         }
     }
 }

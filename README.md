@@ -6,7 +6,9 @@
 
 # To-d0
 
-* try exporting to Poly-make
+- add test to check whether a given cycle must have infinite or finite lifespan
+- try exporting to Poly-make
+
 
 # Debug / verification
 
@@ -38,3 +40,10 @@
 - number of cells in each dimension
 - computation time / memory
 - is it a manifold?
+
+
+## Paper
+
+- consider moving away from notation \sigma_b
+- don't pre-assign a class to be critical versus non-critical
+- merge barcode search

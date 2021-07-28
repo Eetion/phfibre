@@ -3,3 +3,5 @@ pub mod phfibre;
 pub mod utilities;
 pub mod intervals_and_ordinals;
 pub mod rank_calculations;
+pub mod roots;
+pub mod facets;

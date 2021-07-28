@@ -1,24 +1,25 @@
-
+use solar::utilities::index::SuperVec;
 use crate::intervals_and_ordinals::*;
 use num::rational::Ratio;
 use std::iter::FromIterator;
 use std::iter;
 use solar;
-
+use solar::rings::ring::{Semiring, Ring, DivisionRing};
+use std::fmt::Debug;
 
 type Cell = usize;
 type Coeff = Ratio< i64 >;
-type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
+// type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
 #[derive(Clone, Debug)]
 pub struct ChainComplexRankNullity{
-    data_image:     Vec< usize >,
-    data_kernel:    Vec< usize >
+    data_image:     SuperVec< usize >,
+    data_kernel:    SuperVec< usize >
 }
 
 impl ChainComplexRankNullity {
-    pub fn rank_boundaries( &self, dim: &usize ) -> usize { self.data_image[ *dim ].clone() }
-    pub fn rank_cycles(     &self, dim: &usize ) -> usize { self.data_kernel[ *dim ].clone() }    
+    pub fn rank_boundaries( &self, dim: &usize ) -> usize { self.data_image.val( *dim ).clone() }
+    pub fn rank_cycles(     &self, dim: &usize ) -> usize { self.data_kernel.val( *dim ).clone() }    
     pub fn rank_homology(   &self, dim: &usize ) -> usize { self.rank_cycles(dim) - self.rank_boundaries(dim) }
     pub fn rank_chains(     &self, dim: &usize ) -> usize { 
         match *dim == 0 {
@@ -26,25 +27,35 @@ impl ChainComplexRankNullity {
             false   =>  self.rank_cycles(dim) + self.rank_boundaries( &(dim.clone()-1) ) 
         }        
     }    
-    pub fn rank_vec_boundaries( &self ) -> Vec< usize > { self.data_image.clone() }
-    pub fn rank_vec_cycles( &self )     -> Vec< usize > { self.data_kernel.clone() }    
-    pub fn rank_vec_homology( &self )   -> Vec< usize > { 
-        Vec::from_iter(  
-            (0..self.data_image.len())
-                .map( |x| self.rank_homology( &x ) )
-        )  
+
+    /// Super vector specifying rank of boundary space per degree.        
+    pub fn rank_boundaries_supervec( &self ) -> SuperVec< usize > { self.data_image.clone() }
+
+    /// Super vector specifying rank of cycle space per degree.    
+    pub fn rank_cycles_supervec( &self )     -> SuperVec< usize > { self.data_kernel.clone() }  
+    
+    /// Super vector specifying rank of homology space per degree.        
+    pub fn rank_homology_supervec( &self )   -> SuperVec< usize > { 
+        let vec =       Vec::from_iter(  
+                            (0..self.data_image.vec.len())
+                                .map( |x| self.rank_homology( &x ) )
+                        );
+        SuperVec{ vec: vec, val: 0 }
     }
-    pub fn rank_vec_chains( &self )   -> Vec< usize > { 
-        Vec::from_iter(  
-            (0..self.data_image.len())
-                .map( |x| self.rank_chains( &x ) )
-        )  
+
+    /// Super vector specifying rank of chain space per degree.
+    pub fn rank_vec_chains( &self )   -> SuperVec< usize > { 
+        let vec =       Vec::from_iter(  
+                            (0..self.data_image.vec.len())
+                                .map( |x| self.rank_chains( &x ) )
+                        );
+        SuperVec{ vec: vec, val: 0 }
     }    
 
     pub fn top_chain_degree( &self ) -> Option< usize > {
-        match self.data_image.is_empty(){
+        match self.data_image.vec.is_empty(){
             true    =>  None,
-            false   =>  Some( self.data_image.len() )
+            false   =>  Some( self.data_image.vec.len() - 1 ) // why subtract 1?  consider case where top_chain_degree = 0
         }
     }
 }
@@ -55,16 +66,18 @@ impl ChainComplexRankNullity {
 //  ---------------------------------------------------------------------------
 
 
-pub fn  chain_cx_rank_nullity( 
-            boundary:       Vec< Vec< (Cell, Coeff) > >,
-            ring:           Ring,
+pub fn  chain_cx_rank_nullity< RingOp, RingElt >( 
+            boundary:       Vec< Vec< (Cell, RingElt) > >,
+            ring:           RingOp,
             cell_dims:      & Vec< usize >
         ) 
         -> 
         ChainComplexRankNullity 
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:    Clone + Debug + PartialOrd
 {
     // number of degrees where where compute rank
-    let mut num_degrees         =   cell_dims.iter().cloned().max().unwrap() + 1;
+    let num_degrees         =   cell_dims.iter().cloned().max().unwrap() + 1;
 
     // placeholder for boundary ranks
     let mut dims_b  : Vec< _ >  =   Vec::from_iter( 
@@ -108,7 +121,10 @@ pub fn  chain_cx_rank_nullity(
         // }
     }
 
-    ChainComplexRankNullity { data_image: dims_b, data_kernel: dims_z }
+    ChainComplexRankNullity {   
+                                data_image:     SuperVec{ vec: dims_b, val: 0 }, 
+                                data_kernel:    SuperVec{ vec: dims_z, val: 0 }
+                            }
 }
 
 
@@ -118,27 +134,24 @@ pub fn  chain_cx_rank_nullity(
 
 /// Calculates the exact number of degenerate bars in each dimension, given 
 /// the barcode and the dimensions of the boundary spaces.
-pub fn degenerate_bar_quota( 
+pub fn num_degenerate_bars_per_degree( 
     ranks:      & ChainComplexRankNullity,
     barcode:    & Barcode,
     ) 
     -> 
-    Vec< usize > 
+    SuperVec< usize > 
 {
-    let top_chain_deg           =   ranks.top_chain_degree().unwrap();
 
-    println!("TOP DIM = {:?}", & top_chain_deg );
-
-    let num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim();
-    let mut quota               =   Vec::with_capacity( top_chain_deg + 1 ); // why +1?  consider the case where top_chain_deg = 0
-
-    for dim in 0..top_chain_deg+1{
-        quota
-            .push(
-                ranks.rank_boundaries( &dim ) - num_bars_fin_per_dim[ dim ]
-            )
+    // compute dimension of boundary space in each degree
+    let mut quota       =   ranks.rank_boundaries_supervec();
+    
+    // subtract number of bars in each degree
+    let mut num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim().vec;    
+    for deg in 0 .. num_bars_fin_per_dim.len() {
+        quota.vec[ deg ] -= num_bars_fin_per_dim[ deg ]
     }
-    quota
+
+    quota // this is a super vec
 }
 
 
@@ -156,7 +169,7 @@ mod tests {
     {
 
         // ring operator
-        let ring                =   Ring::new();
+        let ring                =   solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >::new();
 
         // boundary matrix of the interval
         let boundary            =   vec![ 
@@ -187,10 +200,10 @@ mod tests {
         assert_eq!( 1, ranks.rank_homology( &0 ));                                
         assert_eq!( 0, ranks.rank_homology( &1 ));         
         
-        assert_eq!( vec![2, 1], ranks.rank_vec_chains() );
-        assert_eq!( vec![2, 0], ranks.rank_vec_cycles() );
-        assert_eq!( vec![1, 0], ranks.rank_vec_boundaries() );
-        assert_eq!( vec![1, 0], ranks.rank_vec_homology() );                                
+        assert_eq!( SuperVec{ vec: vec![2, 1], val: 0 }, ranks.rank_vec_chains() );
+        assert_eq!( SuperVec{ vec: vec![2, 0], val: 0 }, ranks.rank_cycles_supervec() );
+        assert_eq!( SuperVec{ vec: vec![1, 0], val: 0 }, ranks.rank_boundaries_supervec() );
+        assert_eq!( SuperVec{ vec: vec![1, 0], val: 0 }, ranks.rank_homology_supervec() );                                
     }     
 
 }

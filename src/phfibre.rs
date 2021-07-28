@@ -3,17 +3,20 @@ use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
 use crate::rank_calculations::*;
 use solar::reduce::vec_of_vec::{clear_cols};
+use solar::utilities::index::{SuperVec, SuperIndex};
+use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std;
+use std::fmt::Debug;
 use ordered_float::OrderedFloat;
 
 type Cell = usize;
 type Coeff = Ratio< i64 >;
 type Fil = usize;
 type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
-type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
+// type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
 
 
@@ -24,13 +27,26 @@ type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TO DO 
 
-// INITIALIZE
+// PRE-CHECK THAT BARCODE AND COMPLEX ARE COMPATIBLE
 // CHECK INTERSECTION 
 // CALCULATE STATISTICS ABOUT POLYTOPES
 // FUNCTION TO CHECK THAT BARCODE HAS BEEN COMPUTED CORRECTLY (IE COMPUTE BARCODE AFTER THE FACT, USING THE POLYHEDRON OBJECT)
+// (NOW, UPON REFLECTION, I THINK WE HAVE TO BE CAREFUL ABOUT WHETHER THIS IS TRULY WELL-FOUNDED, MATHEMATICALLY) ADD A SCREENER FOR WHETHER A NEW POSTIVE CELL SHOULD HAVE FINITE OR INFINITE LIFE
+// IMPLEMENT THE "CROSS-CHECK" STRATEGY AND COMPARE WITH ORIGINAL IMPLEMENTATION
 
+    //  PRECOMPUTE
+    //  compute: bars that stop and start at each endpoint
+   
+    //  FEASIBILITY CHECK
+    //  compute: ranks of boundary operators (concomitantly, betti numbers)
+    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)    
+    //  check: #(inf bars of dimension dim) == betti_dim( num_cells_total space )
+    //  check: #(fin bars of dimension dim) <= rank( num_cells_total space )
 
+    //  INITIALIZE PARTIAL DATA
 
+    //  EXPLORE THE TREE
+    //  remove duplicate polyhedra as we go
 
 
 
@@ -52,17 +68,18 @@ pub struct CellEntry{
 
 /// Represents a node of the search tree.
 #[derive(Clone, Debug)]
-pub struct Node<'a >
+pub struct Node < 'a, RingOp, RingElt > 
+    where RingOp: Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>
 {
-    boundary:               Vec< Vec< ( Cell, Coeff ) > >,  // boundary matrix reprsented as a vector of vectors
+    boundary:               Vec< Vec< ( Cell, RingElt ) > >,  // boundary matrix reprsented as a vector of vectors
     barcode:                &'a Barcode,                    // the target barcode (contains useful ordinal data)
     barcode_inverse:        &'a BarcodeInverse,             // pointer to a central register that maps bar endpoints to bar ids       
 
-    ring:                   Ring,
+    ring:                   RingOp,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
     bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
 
-    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension    
+    bars_degn_quota:        SuperVec< usize >,              // number of degenerate cells anticipated in each dimension    
 
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
     polytope:               Polytope,    
@@ -85,21 +102,24 @@ pub struct Node<'a >
 
 }
 
-impl <'a> Node<'a> {
+impl < 'a, RingOp, RingElt > Node < 'a, RingOp, RingElt > 
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:    Clone + Debug + PartialOrd
+{
 
     pub fn make_root(   
-        boundary:               Vec< Vec< (Cell, Coeff)>>,
+        boundary:               Vec< Vec< (Cell, RingElt)>>,
         barcode:            &'a Barcode,
         barcode_inverse:    &'a BarcodeInverse,        
-        cell_dims:          &   Vec< usize >,             
+        cell_dims:          &   Vec< usize >,   
+        ring:                   RingOp,          
     ) 
     -> 
-    Node<'a> 
+    Node< 'a, RingOp, RingElt >    
     {
 
-        let num_cells               =   cell_dims.len();
-        let ring                    =   Ring::new();        
-        let mut boundary_buffer     =   Vec::new();
+        let num_cells               =   cell_dims.len();       
+        let boundary_buffer         =   Vec::new();
         let bc_endpoint_now         =   0;
 
         // compute degenrate bar quotas
@@ -108,12 +128,12 @@ impl <'a> Node<'a> {
                                             ring.clone(),
                                             & cell_dims
                                         );
-        let bars_degn_quota         =   degenerate_bar_quota(
+        let bars_degn_quota         =   num_degenerate_bars_per_degree(
                                             & ranks,
                                             & barcode
                                         );
         // level set sizes
-        let lev_set_sizes           =   LevelSetSizes{ pointers: Vec::new() };
+        let lev_set_sizes           =   LevelSetSizes{ pointers: vec![0] };
 
         // polytope
         let polytope                =   Polytope{ 
@@ -137,9 +157,9 @@ impl <'a> Node<'a> {
         }
 
         // cell_ids_out
-        let chain_dim_vec           =   ranks.rank_vec_chains();    // precompute sizes of component vectors
+        let chain_space_dim_per_deg =   ranks.rank_vec_chains();    // precompute sizes of component vectors
         let mut cell_ids_out        =   Vec::new();                 // initialize empty sequence of vectors
-        for dim in chain_dim_vec {                                  // initialize constituent vectors
+        for dim in chain_space_dim_per_deg.vec {                                  // initialize constituent vectors
             cell_ids_out.push( Vec::with_capacity(dim) )
         }
         for cell_id in 0..num_cells {                               // populate vectors
@@ -148,14 +168,22 @@ impl <'a> Node<'a> {
 
 
 
-        let mut cell_ids_pos_crit   =   HashSet::new();
-        let mut cell_ids_pos_degn   =   HashSet::new();        
-        let mut bar_ids_dun_fin     =   Vec::new();
-        let mut bar_ids_dun_inf     =   Vec::new();
+        let cell_ids_pos_crit       =   HashSet::new();
+        let cell_ids_pos_degn       =   HashSet::new();        
+        let bar_ids_dun_fin         =   Vec::new();
+        let bar_ids_dun_inf         =   Vec::new();
 
-        let mut bar_ids_now_inf_brn    =   Vec::new();
-        let mut bar_ids_now_fin_brn    =   Vec::new();
-        let mut bar_ids_now_fin_die    =   Vec::new();
+        let bar_ids_now_inf_brn     =   barcode_inverse
+                                            .inf_brn
+                                            [ bc_endpoint_now ]
+                                            .clone();
+
+        let bar_ids_now_fin_brn     =   barcode_inverse
+                                            .fin_brn
+                                            [ bc_endpoint_now ]
+                                            .clone();            
+
+        let bar_ids_now_fin_die     =   Vec::new(); // no bars die at the first step in the filtration
         
         Node { 
             boundary:               boundary.clone(),
@@ -174,42 +202,11 @@ impl <'a> Node<'a> {
             cell_ids_pos_degn:      cell_ids_pos_degn,                            
             bar_ids_dun_fin:        bar_ids_dun_fin,
             bar_ids_dun_inf:        bar_ids_dun_inf,
-            bar_ids_now_inf_brn:    bar_ids_now_fin_brn,
-            bar_ids_now_fin_brn:    bar_ids_now_inf_brn,
+            bar_ids_now_inf_brn:    bar_ids_now_inf_brn,
+            bar_ids_now_fin_brn:    bar_ids_now_fin_brn,
             bar_ids_now_fin_die:    bar_ids_now_fin_die
         }     
     }
-
-}
-
-
-//  ---------------------------------------------------------------------------  
-//  ENUMERATE POLYHEDRA
-//  ---------------------------------------------------------------------------  
-
-
-fn  enumerate_compatible_filtrations( 
-        boundary: Vec<Vec< (Cell, Coeff) >>, 
-        cell_registry: Vec<Cell>,
-        barcode_inf_births: Vec< Fil >,
-        barcode_fin_births: Vec< Fil >,
-        barcode_fin_deaths: Vec< Fil >                
-     ) 
-{
-
-    //  PRECOMPUTE
-    //  compute: bars that stop and start at each endpoint
-   
-    //  FEASIBILITY CHECK
-    //  compute: ranks of boundary operators (concomitantly, betti numbers)
-    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)    
-    //  check: #(inf bars of dimension dim) == betti_dim( num_cells_total space )
-    //  check: #(fin bars of dimension dim) <= rank( num_cells_total space )
-
-    //  INITIALIZE PARTIAL DATA
-
-    //  EXPLORE THE TREE
-    //  remove duplicate polyhedra as we go
 
 }
 
@@ -219,9 +216,11 @@ fn  enumerate_compatible_filtrations(
 //  ---------------------------------------------------------------------------  
 
 
-pub fn explore( node: & Node, results: &mut Vec< Polytope > )
-{
-   
+pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mut Vec< Polytope > )
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:    Clone + Debug + PartialOrd
+{ 
+
     //  PUSH LEAF NODE TO RESULTS
 
     if  node.lev_set_sizes.size_last()          ==  Some( 0 ) &&
@@ -285,23 +284,24 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
             // update set of bars to account for
             child.bar_ids_now_inf_brn   =   child.barcode_inverse
                                                 .inf_brn
-                                                [ child.bc_endpoint_now ]
+                                                .sindex( child.bc_endpoint_now, vec![] )
                                                 .clone();
 
             child.bar_ids_now_fin_brn   =   child.barcode_inverse
                                                 .fin_brn
-                                                [ child.bc_endpoint_now ]
+                                                .sindex( child.bc_endpoint_now, vec![] )
                                                 .clone();            
             
             child.bar_ids_now_fin_die   =   child.barcode_inverse
                                                 .fin_die
-                                                [ child.bc_endpoint_now ]
+                                                .sindex( child.bc_endpoint_now, vec![] )
                                                 .clone();                        
 
         }
 
         // RUN EXPLORE ON CHILD
         
+        println!("CALL 1");
         explore( & child, results );
         
     }
@@ -316,9 +316,9 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
         for (bar_id_count, bar_id) in node.bar_ids_now_inf_brn.iter().cloned().enumerate() { 
 
             // clone info about bar to be added
-            let mut bar_new     =   node
-                                        .barcode
-                                        .bar_inf( bar_id );  
+            let bar_new     =   node
+                                    .barcode
+                                    .bar_inf( bar_id );  
 
             // loop over all cycles of appropriate dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -331,7 +331,9 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                                 .is_empty()
                     )  
             {   
-                
+
+                println!("ADDING INFINITE POSITIVE CELL");
+
                 // update: 
                 //  lev_set_sizes 
                 //  cells_all
@@ -346,7 +348,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                 child.lev_set_is_crit   =   true;
 
                 // move bar and positive cell
-                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                let _    =   child.cell_ids_out[ bar_new.dim() ].swap_remove(pos_id_out_count);      // remove cell from "out list"
                 let _    =   child.bar_ids_now_inf_brn.swap_remove(bar_id_count);   // remove bar from "unadded list"
                 child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
                
@@ -356,12 +358,20 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     [ pos_id_out ]
                     .birth_ordinal
                                         =   child.lev_set_sizes.num_cells_total();
+
+                // record the birth *level set ordinal** of the added cell in the polytope
+                child
+                    .polytope
+                    .data_c_to_l    
+                    [ pos_id_out ]
+                                        =   child.lev_set_sizes.last_level_set_ordinal().unwrap();                                        
                
                 // update number of cells born
                 child.lev_set_sizes.grow_last_set();
 
                 // RUN EXPLORE ON CHILD
                 
+                println!("CALL 2");                
                 explore( & child, results );
             }
         } 
@@ -379,8 +389,8 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
             //  bar_ids_now
 
             // clone info about bar to be added
-            let mut bar_new     =   node.barcode
-                                        .bar_fin( bar_id );
+            let bar_new     =   node.barcode
+                                    .bar_fin( bar_id );
 
             // loop over all cycles of appropriate dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -393,7 +403,8 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                                                                     .is_empty()
                                                     )  
             {   
-                
+                println!("ADDING FINITE POSITIVE CELL");
+
                 // create child node
                 let mut child   =   node.clone();                                   // this must come before swap_remove
 
@@ -405,15 +416,10 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                 child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
 
                 // move pos_id_out
-                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                let _    =   child.cell_ids_out[ bar_new.dim() ].swap_remove(pos_id_out_count);      // remove cell from "out list"
                 
                 child.cell_ids_pos_crit.insert(
                     pos_id_out 
-                    // ( 
-                    // bar_new.birth.clone(), 
-                    // bar_new.dim.clone(),
-                    // pos_id_out
-                    // )
                 );
                
                 // record the birth ordinal of the added cell in the central registry
@@ -422,12 +428,21 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     [ pos_id_out ]
                     .birth_ordinal
                                 =   child.lev_set_sizes.num_cells_total();
-               
+
+                // record the birth *level set ordinal** of the added cell in the polytope
+                child
+                    .polytope
+                    .data_c_to_l    
+                    [ pos_id_out ]
+                                        =   child.lev_set_sizes.last_level_set_ordinal().unwrap();                                      
+
                 // update number of cells born
                 child.lev_set_sizes.grow_last_set(); 
+                
 
                 // RUN EXPLORE ON CHILD
                 
+                println!("CALL 3");                
                 explore( & child, results );
 
             }
@@ -443,7 +458,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
         for (bar_id_count, bar_id) in node.bar_ids_now_fin_die.iter().cloned().enumerate() {
 
             // clone info about bar to be added
-            let mut bar_new     =   node.barcode
+            let bar_new         =   node.barcode
                                         .bar_fin( bar_id );
 
             // loop over all dimension (dim+1) chains
@@ -455,7 +470,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
             {
 
                 // find the lowest nonzero entry in this column
-                let mut low_id_opt      =    node.boundary
+                let low_id_opt        =    node.boundary
                                                 [ neg_id ]  
                                                 .iter()
                                                 .map( |x| x.0 )
@@ -493,7 +508,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     child.lev_set_is_crit   =   true;
 
                     // move cells
-                    let _           =   child.cell_ids_out.swap_remove(neg_id_count);           // remove negative cell from "out list"
+                    let _           =   child.cell_ids_out[ bar_new.dim() ].swap_remove(neg_id_count);           // remove negative cell from "out list"
                     child.cell_ids_pos_crit.remove( & low_id );                                   // remove positive cell from set of unmatched positive cells
 
                     // move bar
@@ -507,6 +522,13 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                         [ neg_id ]
                         .birth_ordinal
                                     =   child.lev_set_sizes.num_cells_total();
+
+                    // record the birth *level set ordinal** of the added cell in the polytope
+                    child
+                        .polytope
+                        .data_c_to_l    
+                        [ neg_id ]
+                                        =   child.lev_set_sizes.last_level_set_ordinal().unwrap();                                      
                    
                     // update number of cells born
                     child.lev_set_sizes.grow_last_set(); 
@@ -523,7 +545,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     // define the ingredients for clearing
                     let clearor     =   child.boundary[ neg_id ].clone();
                     let pivot_entry =   clearor.last().unwrap();
-                    let ring        =   Ring::new();
+                    let ring        =   child.ring.clone();
 
                     // deallocate the negative column (it's no longer needed)
                     child.boundary[ neg_id ].clear();
@@ -545,6 +567,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
 
                     // RUN EXPLORE ON CHILD
                     
+                    println!("CALL 4");                    
                     explore( & child, results );
                 }
             }
@@ -557,7 +580,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
         for dim in 0..node.cell_ids_out.len() {
 
             // short-circuit if we have already met the quota for degenerate bars in this dimension
-            if node.bars_degn_quota[ dim ] == 0 { continue }
+            if node.bars_degn_quota.val( dim ) == 0 { continue }
 
             // loop over all cycles of given dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -583,7 +606,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
 
 
                 // move pos_id_out
-                let _    =   child.cell_ids_out.swap_remove(pos_id_out_count);      // remove cell from "out list"
+                let _    =   child.cell_ids_out[ dim ].swap_remove(pos_id_out_count);      // remove cell from "out list"
                 child.cell_ids_pos_degn.insert( pos_id_out );                         // add cell to list of positive degenerate cells
                
                 // record the birth ordinal of the added cell in the central registry
@@ -592,13 +615,21 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     [ pos_id_out ]
                     .birth_ordinal
                                 =   child.lev_set_sizes.num_cells_total();
+
+                // record the birth **level set ordinal** of the added cell in the polytope
+                child
+                    .polytope
+                    .data_c_to_l    
+                    [ pos_id_out ]
+                                        =   child.lev_set_sizes.last_level_set_ordinal().unwrap();                                  
                
                 // update counters
                 child.lev_set_sizes.grow_last_set();    // number of cells born
-                child.bars_degn_quota[dim] -= 1;         // drop the quota for degenerate bars by 1
+                child.bars_degn_quota.vec[dim] -= 1;         // drop the quota for degenerate bars by 1
 
                 // RUN EXPLORE ON CHILD
                 
+                println!("CALL 5");                
                 explore( & child, results );
             }
         }
@@ -618,15 +649,15 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
             {
 
                 // find the lowest nonzero entry in this column
-                let mut low_birth_and_id_opt    =   node.boundary
-                                                        [ neg_id ]  
-                                                        .iter()
-                                                        .map(   |x| 
-                                                                (   
-                                                                    node.cells_all[ x.0 ].birth_ordinal.clone(),   
-                                                                    x.0.clone())                            
-                                                                )
-                                                        .max();                
+                let low_birth_and_id_opt    =   node.boundary
+                                                    [ neg_id ]  
+                                                    .iter()
+                                                    .map(   |x| 
+                                                            (   
+                                                                node.cells_all[ x.0 ].birth_ordinal.clone(),   
+                                                                x.0.clone())                            
+                                                            )
+                                                    .max();                
 
                 // short-circuit if the column is empty                                                 
                 if low_birth_and_id_opt == None { continue }
@@ -653,7 +684,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     let mut child   =   node.clone();                                           // this must come before swap_remove
 
                     // move cells
-                    let _           =   child.cell_ids_out.swap_remove( neg_id_count );         // remove negative cell from "out list"
+                    let _           =   child.cell_ids_out[ dim ].swap_remove( neg_id_count );         // remove negative cell from "out list"
                     child.cell_ids_pos_degn.remove( & low_birth_and_id.1 );                     // remove positive cell from set of unmatched positive cells
 
                     // record the birth ordinal of the added cell in the central registry
@@ -662,6 +693,13 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                         [ neg_id ]
                         .birth_ordinal
                                     =   child.lev_set_sizes.num_cells_total();
+
+                    // record the birth **level set ordinal** of the added cell in the polytope
+                    child
+                        .polytope
+                        .data_c_to_l    
+                        [ neg_id ]
+                                    =   child.lev_set_sizes.last_level_set_ordinal().unwrap();                                       
                    
                     // update number of cells born
                     child.lev_set_sizes.grow_last_set(); 
@@ -677,7 +715,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
                     // define the ingredients for clearing
                     let clearor     =   child.boundary[ neg_id ].clone();
                     let pivot_entry =   clearor.last().unwrap();
-                    let ring        =   Ring::new();
+                    let ring        =   child.ring.clone();
 
                     // deallocate the negative column (it's no longer needed)
                     child.boundary[ neg_id ].clear();
@@ -696,6 +734,7 @@ pub fn explore( node: & Node, results: &mut Vec< Polytope > )
 
                     // RUN EXPLORE ON CHILD
                     
+                    println!("CALL 6");                    
                     explore( & child, results );
                 }
             }
