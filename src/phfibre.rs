@@ -7,6 +7,7 @@ use solar::utilities::index::{SuperVec, SuperIndex};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
+use std::hash::Hash;
 use std::iter::FromIterator;
 use std;
 use std::fmt::Debug;
@@ -68,18 +69,19 @@ pub struct CellEntry{
 
 /// Represents a node of the search tree.
 #[derive(Clone, Debug)]
-pub struct Node < 'a, RingOp, RingElt > 
-    where RingOp: Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>
+pub struct Node < 'a, FilRaw, RingOp, RingElt> 
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            FilRaw:     Ord + Clone + Hash + Debug
 {
     boundary:               Vec< Vec< ( Cell, RingElt ) > >,  // boundary matrix reprsented as a vector of vectors
-    barcode:                &'a Barcode,                    // the target barcode (contains useful ordinal data)
+    barcode:                &'a Barcode< FilRaw >,          // the target barcode (contains useful ordinal data)
     barcode_inverse:        &'a BarcodeInverse,             // pointer to a central register that maps bar endpoints to bar ids       
 
     ring:                   RingOp,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
     bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
 
-    bars_degn_quota:        SuperVec< usize >,              // number of degenerate cells anticipated in each dimension    
+    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension    
 
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
     polytope:               Polytope,    
@@ -100,22 +102,26 @@ pub struct Node < 'a, RingOp, RingElt >
     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
 
+    last_must_be_crit:      bool,                           // a flag to indicate whether the last level set must be critical
+
 }
 
-impl < 'a, RingOp, RingElt > Node < 'a, RingOp, RingElt > 
+impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt > 
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
-            RingElt:    Clone + Debug + PartialOrd
+            RingElt:    Clone + Debug + PartialOrd,
+            FilRaw:     Ord + Clone + Hash + Debug            
 {
 
     pub fn make_root(   
         boundary:               Vec< Vec< (Cell, RingElt)>>,
-        barcode:            &'a Barcode,
+        barcode:            &'a Barcode< FilRaw >,
         barcode_inverse:    &'a BarcodeInverse,        
         cell_dims:          &   Vec< usize >,   
-        ring:                   RingOp,          
+        ring:                   RingOp,  
+        last_must_be_crit:      bool,        
     ) 
     -> 
-    Node< 'a, RingOp, RingElt >    
+    Node< 'a, FilRaw, RingOp, RingElt >    
     {
 
         let num_cells               =   cell_dims.len();       
@@ -159,7 +165,7 @@ impl < 'a, RingOp, RingElt > Node < 'a, RingOp, RingElt >
         // cell_ids_out
         let chain_space_dim_per_deg =   ranks.rank_vec_chains();    // precompute sizes of component vectors
         let mut cell_ids_out        =   Vec::new();                 // initialize empty sequence of vectors
-        for dim in chain_space_dim_per_deg.vec {                                  // initialize constituent vectors
+        for dim in chain_space_dim_per_deg {                                  // initialize constituent vectors
             cell_ids_out.push( Vec::with_capacity(dim) )
         }
         for cell_id in 0..num_cells {                               // populate vectors
@@ -204,7 +210,8 @@ impl < 'a, RingOp, RingElt > Node < 'a, RingOp, RingElt >
             bar_ids_dun_inf:        bar_ids_dun_inf,
             bar_ids_now_inf_brn:    bar_ids_now_inf_brn,
             bar_ids_now_fin_brn:    bar_ids_now_fin_brn,
-            bar_ids_now_fin_die:    bar_ids_now_fin_die
+            bar_ids_now_fin_die:    bar_ids_now_fin_die,
+            last_must_be_crit:      last_must_be_crit,
         }     
     }
 
@@ -216,17 +223,31 @@ impl < 'a, RingOp, RingElt > Node < 'a, RingOp, RingElt >
 //  ---------------------------------------------------------------------------  
 
 
-pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mut Vec< Polytope > )
+pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt >, results: &mut Vec< Polytope > )
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
-            RingElt:    Clone + Debug + PartialOrd
+            RingElt:    Clone + Debug + PartialOrd,
+            FilRaw:     Clone + Debug + Ord + Hash
 { 
+
+    println!("{:?} {:?} {:?} {:?} {:?}",    &   node.bars_degn_quota,
+                                                node.lev_set_sizes.size_last()          ==  Some( 0 ),
+                                                node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
+                                                node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
+                                                node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf()                                        
+    );
+      
 
     //  PUSH LEAF NODE TO RESULTS
 
     if  node.lev_set_sizes.size_last()          ==  Some( 0 ) &&
         node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len() &&
         node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin() &&
-        node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf()
+        node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf() &&
+        (            
+            node.polytope.lev_set_last_is_critical() == Some( true )
+            ||
+            ! node.last_must_be_crit
+        )
     {
         // we may have alread constructed an equivalent filtration (just with a different order
         // on cells within a level set).  if we haven't then push to results.
@@ -241,18 +262,23 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
     else if node.lev_set_sizes.size_last() != Some( 0 ) &&  // current level set is nonempty 
             node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
             (                                               // C-rule (critical) 
-                ! node.lev_set_is_crit                          // the level set contains no "critical" cell
+                (
+                    ! node.lev_set_is_crit                      // the level set contains no "critical" cell
+                )                          
                 ||                                              // OR
                 (                                               // I_cur is empty
-                node.bar_ids_now_inf_brn.is_empty() &&     
-                node.bar_ids_now_fin_brn.is_empty() &&    
-                node.bar_ids_now_fin_die.is_empty()    
+                    node.bar_ids_now_inf_brn.is_empty() &&     
+                    node.bar_ids_now_fin_brn.is_empty() &&    
+                    node.bar_ids_now_fin_die.is_empty()    
                 )
-            )                                       &&
-            node.barcode                                    // the current level set does not map to 1.0
-                .ordinal
-                .val( node.bc_endpoint_now )
-                != Some( OrderedFloat( 1.0 ) )
+            )                                       
+
+            //  THIS CODE CAUSED PROBLEMS AND I THINK IT'S OK TO DELETE
+            // &&
+            // node.barcode                                    // the current level set does not map to 1.0
+            //     .ordinal
+            //     .val( node.bc_endpoint_now )
+            //     != Some( OrderedFloat( 1.0 ) )
 
         {
 
@@ -300,8 +326,18 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
         }
 
         // RUN EXPLORE ON CHILD
+
+        println!("BOUNDARY:");
+        for col in child.boundary.iter() {
+            println!("{:?}", &col)
+        }
+        println!("POLYTOPE:");
+        println!("{:?}", & child.polytope.data_c_to_l);    
+    
+        println!("CELL IDS OUT:");
+        println!("{:?}", & child.cell_ids_out );          
         
-        println!("CALL 1");
+        println!("CALL 1: INITIALIZED NEW LEV SET");
         explore( & child, results );
         
     }
@@ -331,8 +367,6 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                                 .is_empty()
                     )  
             {   
-
-                println!("ADDING INFINITE POSITIVE CELL");
 
                 // update: 
                 //  lev_set_sizes 
@@ -370,8 +404,18 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                 child.lev_set_sizes.grow_last_set();
 
                 // RUN EXPLORE ON CHILD
+
+                println!("BOUNDARY:");
+                for col in child.boundary.iter() {
+                    println!("{:?}", &col)
+                }
+                println!("POLYTOPE:");
+                println!("{:?}", & child.polytope.data_c_to_l);    
+            
+                println!("CELL IDS OUT:");
+                println!("{:?}", & child.cell_ids_out );                   
                 
-                println!("CALL 2");                
+                println!("CALL 2: ADDED BIRTH CELL FOR INF BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
             }
         } 
@@ -441,8 +485,18 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                 
 
                 // RUN EXPLORE ON CHILD
+
+                println!("BOUNDARY:");
+                for col in child.boundary.iter() {
+                    println!("{:?}", &col)
+                }
+                println!("POLYTOPE:");
+                println!("{:?}", & child.polytope.data_c_to_l);    
+            
+                println!("CELL IDS OUT:");
+                println!("{:?}", & child.cell_ids_out );                   
                 
-                println!("CALL 3");                
+                println!("CALL 3: ADDED BIRTH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
 
             }
@@ -566,8 +620,18 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
 
 
                     // RUN EXPLORE ON CHILD
+
+                    println!("BOUNDARY:");
+                    for col in child.boundary.iter() {
+                        println!("{:?}", &col)
+                    }
+                    println!("POLYTOPE:");
+                    println!("{:?}", & child.polytope.data_c_to_l);    
+                
+                    println!("CELL IDS OUT:");
+                    println!("{:?}", & child.cell_ids_out );                       
                     
-                    println!("CALL 4");                    
+                    println!("CALL 4: ADDED DEATH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                                                    
                     explore( & child, results );
                 }
             }
@@ -580,7 +644,10 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
         for dim in 0..node.cell_ids_out.len() {
 
             // short-circuit if we have already met the quota for degenerate bars in this dimension
-            if node.bars_degn_quota.val( dim ) == 0 { continue }
+            if node.bars_degn_quota.sindex( dim, 0 ) == 0 { 
+                // println!("skipping: quota {:?}, dim {:?}", &node.bars_degn_quota, &dim); 
+                continue             
+            }
 
             // loop over all cycles of given dimension 
             for (pos_id_out_count, pos_id_out) in node.cell_ids_out
@@ -593,6 +660,8 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                                                                     .is_empty()
                                                     )  
             {   
+
+                println!("a candidate for degenerate positive cell: {:?}", & pos_id_out );
                 
                 // update: 
                 //  lev_set_sizes 
@@ -625,11 +694,21 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                
                 // update counters
                 child.lev_set_sizes.grow_last_set();    // number of cells born
-                child.bars_degn_quota.vec[dim] -= 1;         // drop the quota for degenerate bars by 1
+                child.bars_degn_quota[dim] -= 1;         // drop the quota for degenerate bars by 1
 
                 // RUN EXPLORE ON CHILD
                 
-                println!("CALL 5");                
+                println!("BOUNDARY:");
+                for col in child.boundary.iter() {
+                    println!("{:?}", &col)
+                }
+                println!("POLYTOPE:");
+                println!("{:?}", & child.polytope.data_c_to_l);    
+            
+                println!("CELL IDS OUT:");
+                println!("{:?}", & child.cell_ids_out );   
+
+                println!("CALL 5: ADDED BIRTH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone() );                                    
                 explore( & child, results );
             }
         }
@@ -733,8 +812,18 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
                     );
 
                     // RUN EXPLORE ON CHILD
+
+                    println!("BOUNDARY:");
+                    for col in child.boundary.iter() {
+                        println!("{:?}", &col)
+                    }
+                    println!("POLYTOPE:");
+                    println!("{:?}", & child.polytope.data_c_to_l);    
+                
+                    println!("CELL IDS OUT:");
+                    println!("{:?}", & child.cell_ids_out );                       
                     
-                    println!("CALL 6");                    
+                    println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );                                                                      
                     explore( & child, results );
                 }
             }
@@ -742,3 +831,6 @@ pub fn explore< RingOp, RingElt >( node: & Node< RingOp, RingElt >, results: &mu
     }
 }
 
+//  ---------------------------------------------------------------------------  
+//  EXPLORE TREE
+//  ---------------------------------------------------------------------------  

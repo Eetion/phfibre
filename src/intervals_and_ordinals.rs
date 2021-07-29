@@ -5,11 +5,13 @@ use num::rational::Ratio;
 use std::collections::{HashMap};
 use std::hash::Hash;
 use std::iter::FromIterator;
+use std::cmp::Ord;
+use std::iter;
 
-type Cell = usize;
-type Coeff = Ratio< i64 >;
+// type Cell = usize;
+// type Coeff = Ratio< i64 >;
 type Fil = usize;
-type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
+// type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
 
 
 
@@ -31,7 +33,7 @@ pub fn to_ordered_float( v: & Vec< f64 > ) -> Vec< OrderedFloat< f64> > { v.iter
 
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrdinalData < T : Eq + PartialOrd + PartialEq + Hash > {
+pub struct OrdinalData < T : Ord + Eq + PartialOrd + PartialEq + Hash > {
     ord_to_val:  Vec< T >,
     val_to_ord:  HashMap< T, usize >
 }
@@ -39,7 +41,7 @@ pub struct OrdinalData < T : Eq + PartialOrd + PartialEq + Hash > {
 impl    < T >
         OrdinalData
         < T >
-        where T : std::cmp::Eq + PartialOrd + PartialEq + Hash + Clone
+        where T : Ord + Eq + PartialOrd + PartialEq + Hash + Clone
 {
     /// The ordinal of the raw filtration value
     pub fn ord( &self, a: &T ) -> Option< usize > { 
@@ -53,7 +55,9 @@ impl    < T >
 
 
 /// Get the ordinal data for the range of values taken by a vector of ordered floats
-pub fn ordinate( v: & Vec< OrderedFloat<f64> > ) -> OrdinalData< OrderedFloat< f64> > {
+pub fn ordinate < FilRaw > ( v: & Vec< FilRaw > ) -> OrdinalData< FilRaw > 
+    where FilRaw: Ord + Hash + Clone
+{
     let mut a       =   v.clone();
     let mut b       =   HashMap::new();
     a.sort();       // sort entries
@@ -71,15 +75,16 @@ pub fn ordinate( v: & Vec< OrderedFloat<f64> > ) -> OrdinalData< OrderedFloat< f
 
 
 //  ---------------------------------------------------------------------------  
-//  BARCODES
+//  BARS + BARCODES
 //  ---------------------------------------------------------------------------  
 
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct BarFinite { 
-    dim:        usize, 
-    birth:      Fil, 
-    death:      Fil 
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub struct BarFinite 
+{ 
+    pub dim:        usize, 
+    pub birth:      Fil, 
+    pub death:      Fil 
 }
 impl BarFinite{ 
     pub fn dim( &self ) -> usize { self.dim.clone()   }
@@ -87,10 +92,10 @@ impl BarFinite{
     pub fn death( &self ) -> Fil { self.death.clone() }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct BarInfinite { 
-    dim:        usize, 
-    birth:      Fil 
+    pub dim:        usize, 
+    pub birth:      Fil 
 }
 impl BarInfinite{ 
     pub fn dim( &self ) -> usize { self.dim.clone()   }
@@ -98,13 +103,18 @@ impl BarInfinite{
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Barcode {
+pub struct Barcode< FilRaw > 
+    where FilRaw: Clone + Ord + Hash
+{
     pub inf:            Vec< BarInfinite >,     // infinite bars (birth ordinals)
     pub fin:            Vec< BarFinite >,       // finite bars (birth/death ordinals)
     pub ordinal:        OrdinalData< FilRaw >,  // struct converting endpoints to ordinals and vice versa
 }
 
-impl Barcode{
+
+impl < FilRaw > Barcode< FilRaw >
+    where FilRaw: Clone + Ord + Hash
+{
 
     /// The maximum dimension of any bar in the barcode (None if the barcode is empty)
     pub fn top_bar_degree( &self ) -> Option< usize > { 
@@ -165,7 +175,7 @@ impl Barcode{
         fin_die:    Vec< FilRaw >,
         ) 
         -> 
-        Barcode 
+        Barcode< FilRaw > 
     {
         // place all endpoints into sequence
         let mut endpoints_raw_unordered   =   Vec::new();
@@ -212,7 +222,19 @@ impl Barcode{
 
         return barcode
     }
+
+    pub fn sort( &mut self ) 
+        where FilRaw: Ord 
+    {
+        self.fin.sort();
+        self.inf.sort();
+    }
 }
+
+//  ---------------------------------------------------------------------------  
+//  BARCODE INVERSE
+//  ---------------------------------------------------------------------------  
+
 
 /// Encodes a map sending (ordinal) endpoints to sets of bar id numbers.
 #[derive(Clone, Debug)]
@@ -225,11 +247,11 @@ pub struct BarcodeInverse {
 impl BarcodeInverse{
 
     /// Returns an object that maps an (ordinal) endpoints back to set of bar id's.
-    pub fn  from_barcode(
-        barcode: & Barcode
+    pub fn from_barcode < FilRaw > (
+        barcode: & Barcode< FilRaw >
         ) ->
         BarcodeInverse
-
+        where FilRaw: Ord + Clone + Hash
     {
         let mut endpoint_to_barids = BarcodeInverse {
             inf_brn:    Vec::with_capacity(0),
@@ -268,6 +290,71 @@ impl BarcodeInverse{
 }
 
 
+//  ---------------------------------------------------------------------------  
+//  COMPUTE BARCODE FROM PAIRS
+//  ---------------------------------------------------------------------------  
+
+
+pub fn  pairs_dims_births_to_barcode< FilRaw >(
+    pairs:  & Vec< (usize, usize) >,
+    dims:   & Vec< usize >,
+    births: & Vec< FilRaw >
+) 
+-> 
+Barcode< FilRaw >
+where FilRaw: Ord + Clone + Hash
+{
+
+let ordinal         =   ordinate( &births );
+
+let num_cells           =   dims.len();
+let mut num_bars_fin    =   0;
+let mut num_bars_inf    =   num_cells;
+let mut essential       =   Vec::from_iter( iter::repeat(true).take(num_cells) );
+
+// count
+for pair in pairs {
+essential[ pair.0 ]     =   false;
+essential[ pair.1 ]     =   false;
+num_bars_inf            -=  2;
+if births[ pair.0 ] != births[ pair.1 ] { num_bars_fin +=1 }
+}
+
+let mut inf             =   Vec::with_capacity( num_bars_inf );
+let mut fin             =   Vec::with_capacity( num_bars_fin );
+
+// push finite bars
+for pair in pairs {
+if births[ pair.0 ] != births[ pair.1 ] { 
+    fin.push(
+        BarFinite{ 
+            dim:    dims[ pair.0 ], 
+            birth:  ordinal.ord( &births[ pair.0 ] ).unwrap(),
+            death:  ordinal.ord( &births[ pair.1 ] ).unwrap(),
+        }
+    )
+}
+}
+
+// push infinite bars
+for cell_id in 0 .. num_cells {
+if essential[ cell_id ] {
+    inf.push(
+        BarInfinite{
+            dim: dims[ cell_id ],
+            birth: ordinal.ord( &births[ cell_id ] ).unwrap(),
+        }
+    )
+}
+}
+
+Barcode{
+inf:        inf,
+fin:        fin,
+ordinal:    ordinal
+}
+
+}     
 
 
 //  ---------------------------------------------------------------------------  
@@ -366,7 +453,7 @@ impl Polytope {
     }
 
     /// Determine whether the last level set in the polytope is critical.
-    pub fn lev_set_last_to_is_critical( &self ) -> Option<bool> {  
+    pub fn lev_set_last_is_critical( &self ) -> Option<bool> {  
         match self.num_lev_sets() == 0 { 
             true => None, 
             false => self.lev_set_ord_to_is_critical( self.num_lev_sets() )
@@ -381,7 +468,7 @@ impl Polytope {
     ///     than all other level sets. 
     /// This function throws an error if the polytope contains no level sets.
     pub fn ensure_last_lev_set_critical( &mut self ) {
-        if let Some( is_crit ) = self.lev_set_last_to_is_critical() {
+        if let Some( is_crit ) = self.lev_set_last_is_critical() {
             if ! is_crit { 
                 let i   =   self.num_lev_sets()-1;
                 self.data_l_to_fmin[ i ] += 1; // increasing the min filtration value will make the level set critical            
@@ -577,5 +664,36 @@ mod tests {
         
         
     }     
+
+    #[test]
+    fn test_barcode_from_pairs() {
+    
+        let pairs   =   vec![ (0,1), (2,3) ];
+        let dims    =   vec![ 0,    1,      1,      2,      3   ];
+        let births  =   vec![ 0,    1,      1,      1,      2  ];
+
+        let barcode =   pairs_dims_births_to_barcode(
+                            & pairs,
+                            & dims,
+                            & births,
+                        );
+
+        println!("{:?}", & barcode);                        
+
+        assert_eq!(     &   barcode.inf, 
+                        &   vec![ BarInfinite{ dim: 3, birth: 2 } ] 
+        );
+
+        assert_eq!(     &   barcode.fin, 
+            &   vec![ 
+                    BarFinite{ dim: 0, birth: 0, death: 1 },
+                ] 
+        );
+        
+        assert_eq!(     &   barcode.ordinal.ord_to_val, 
+                        &   vec![0, 1, 2],
+        );
+
+    }
 
 }    

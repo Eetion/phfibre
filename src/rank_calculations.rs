@@ -1,25 +1,55 @@
-use solar::utilities::index::SuperVec;
-use crate::intervals_and_ordinals::*;
+use solar::utilities::index::{SuperIndex};
+use crate::intervals_and_ordinals::{ordinate, Barcode, BarFinite, BarInfinite};
 use num::rational::Ratio;
 use std::iter::FromIterator;
 use std::iter;
 use solar;
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use std::fmt::Debug;
+use std::hash::Hash;
 
 type Cell = usize;
-type Coeff = Ratio< i64 >;
+// type Coeff = Ratio< i64 >;
 // type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
+
+
+
+//  ---------------------------------------------------------------------------
+//  COMPUTE PIVOT INDEX PAIRS FROM REDUCED MATRIX
+//  ---------------------------------------------------------------------------
+
+fn reduced_mat_to_pivot_index_pairs< T >( reduced_mat: &Vec< Vec< (usize,T)> >) 
+    -> 
+    Vec< (usize, usize) >  
+{
+
+    let mut num_pairs       =   0;
+    for col in reduced_mat { if col.len() > 0 { num_pairs += 1} }
+    let mut pairs           =   Vec::with_capacity( num_pairs );
+    for (col_count, col) in reduced_mat.iter().enumerate() { 
+        if col.len() > 0 { 
+            pairs.push( ( col.last().unwrap().0, col_count)  ) 
+        } 
+    }
+    pairs
+}
+
+
+
+//  ---------------------------------------------------------------------------
+//  STRUCT: CHAIN COMPLEX RANK
+//  ---------------------------------------------------------------------------
+
 
 #[derive(Clone, Debug)]
 pub struct ChainComplexRankNullity{
-    data_image:     SuperVec< usize >,
-    data_kernel:    SuperVec< usize >
+    data_image:     Vec< usize >,
+    data_kernel:    Vec< usize >
 }
 
 impl ChainComplexRankNullity {
-    pub fn rank_boundaries( &self, dim: &usize ) -> usize { self.data_image.val( *dim ).clone() }
-    pub fn rank_cycles(     &self, dim: &usize ) -> usize { self.data_kernel.val( *dim ).clone() }    
+    pub fn rank_boundaries( &self, dim: &usize ) -> usize { self.data_image.sindex( *dim, 0 ).clone() }
+    pub fn rank_cycles(     &self, dim: &usize ) -> usize { self.data_kernel.sindex( *dim, 0 ).clone() }    
     pub fn rank_homology(   &self, dim: &usize ) -> usize { self.rank_cycles(dim) - self.rank_boundaries(dim) }
     pub fn rank_chains(     &self, dim: &usize ) -> usize { 
         match *dim == 0 {
@@ -29,47 +59,47 @@ impl ChainComplexRankNullity {
     }    
 
     /// Super vector specifying rank of boundary space per degree.        
-    pub fn rank_boundaries_supervec( &self ) -> SuperVec< usize > { self.data_image.clone() }
+    pub fn rank_boundaries_vec( &self ) -> Vec< usize > { self.data_image.clone() }
 
     /// Super vector specifying rank of cycle space per degree.    
-    pub fn rank_cycles_supervec( &self )     -> SuperVec< usize > { self.data_kernel.clone() }  
+    pub fn rank_cycles_vec( &self )     -> Vec< usize > { self.data_kernel.clone() }  
     
     /// Super vector specifying rank of homology space per degree.        
-    pub fn rank_homology_supervec( &self )   -> SuperVec< usize > { 
+    pub fn rank_homology_vec( &self )   -> Vec< usize > { 
         let vec =       Vec::from_iter(  
-                            (0..self.data_image.vec.len())
+                            (0..self.data_image.len())
                                 .map( |x| self.rank_homology( &x ) )
                         );
-        SuperVec{ vec: vec, val: 0 }
+        vec
     }
 
     /// Super vector specifying rank of chain space per degree.
-    pub fn rank_vec_chains( &self )   -> SuperVec< usize > { 
+    pub fn rank_vec_chains( &self )   -> Vec< usize > { 
         let vec =       Vec::from_iter(  
-                            (0..self.data_image.vec.len())
+                            (0..self.data_image.len())
                                 .map( |x| self.rank_chains( &x ) )
                         );
-        SuperVec{ vec: vec, val: 0 }
+        vec
     }    
 
     pub fn top_chain_degree( &self ) -> Option< usize > {
-        match self.data_image.vec.is_empty(){
+        match self.data_image.is_empty(){
             true    =>  None,
-            false   =>  Some( self.data_image.vec.len() - 1 ) // why subtract 1?  consider case where top_chain_degree = 0
+            false   =>  Some( self.data_image.len() - 1 ) // why subtract 1?  consider case where top_chain_degree = 0
         }
     }
 }
 
 
 //  ---------------------------------------------------------------------------
-//  CHAIN COMPLEX RANKS
+//  CHAIN COMPLEX RANKS -- FROM BOUNDARY MATRIX
 //  ---------------------------------------------------------------------------
 
 
 pub fn  chain_cx_rank_nullity< RingOp, RingElt >( 
             boundary:       Vec< Vec< (Cell, RingElt) > >,
             ring:           RingOp,
-            cell_dims:      & Vec< usize >
+            cell_degs:      & Vec< usize >
         ) 
         -> 
         ChainComplexRankNullity 
@@ -77,7 +107,7 @@ pub fn  chain_cx_rank_nullity< RingOp, RingElt >(
             RingElt:    Clone + Debug + PartialOrd
 {
     // number of degrees where where compute rank
-    let num_degrees         =   cell_dims.iter().cloned().max().unwrap() + 1;
+    let num_degrees         =   cell_degs.iter().cloned().max().unwrap() + 1;
 
     // placeholder for boundary ranks
     let mut dims_b  : Vec< _ >  =   Vec::from_iter( 
@@ -100,31 +130,56 @@ pub fn  chain_cx_rank_nullity< RingOp, RingElt >(
     // compute ranks
     for (col_count, col) in reducindus.iter().enumerate()  {
 
-        let dim                 =   cell_dims[ col_count ];
+        let dim                 =   cell_degs[ col_count ];
         match col.is_empty(){
             true    => dims_z[ dim      ] += 1,
             false   => dims_b[ dim -1   ] += 1
         }
 
-        // // if column is nonempty, add 1 to the rank of boundaries one degree down
-        // if let Some( last_entry ) = end_val( col ) {
-        //     dims_b[ 
-        //         dims[ last_entry.0 ] - 1
-        //     ]
-        //     +=1;
-        // // otherwise increase kernel dimension in this chain degree
-        // } else {
-        //     dims_z[
-        //         dims[ col_count ]
-        //     ]
-        //     += 1
-        // }
     }
 
     ChainComplexRankNullity {   
-                                data_image:     SuperVec{ vec: dims_b, val: 0 }, 
-                                data_kernel:    SuperVec{ vec: dims_z, val: 0 }
+                                data_image:     dims_b,
+                                data_kernel:    dims_z,
                             }
+}
+
+//  ---------------------------------------------------------------------------
+//  CHAIN COMPLEX RANKS -- FROM PAIRS
+//  ---------------------------------------------------------------------------
+
+pub fn  pairs_dims_to_chx_rank_nullity( 
+    pairs:          &   Vec< (usize, usize) >,
+    cell_degs:      &   Vec< usize >
+) 
+-> 
+ChainComplexRankNullity 
+{
+// number of degrees where where compute rank
+let num_degrees         =   cell_degs.iter().cloned().max().unwrap() + 1;
+
+// placeholder for boundary ranks
+let mut dims_b  : Vec< _ >  =   Vec::from_iter( 
+                                iter::repeat(0)
+                                .take( num_degrees )  
+                            );
+
+// placeholder for cycle ranks
+let mut dims_z              =   dims_b.clone();
+
+// cells form cycles until proven otherwise
+for cell_id in 0 .. cell_degs.len() { dims_z[ cell_degs[ cell_id ] ] += 1 }
+
+// now adjust for pivot pairs
+for (row, col) in pairs  {
+    dims_z[ cell_degs[ *col ] ] -=   1;
+    dims_b[ cell_degs[ *row ] ] +=   1;
+}
+
+ChainComplexRankNullity {   
+                        data_image:     dims_b,
+                        data_kernel:    dims_z,
+                    }
 }
 
 
@@ -134,21 +189,22 @@ pub fn  chain_cx_rank_nullity< RingOp, RingElt >(
 
 /// Calculates the exact number of degenerate bars in each dimension, given 
 /// the barcode and the dimensions of the boundary spaces.
-pub fn num_degenerate_bars_per_degree( 
+pub fn num_degenerate_bars_per_degree< FilRaw >( 
     ranks:      & ChainComplexRankNullity,
-    barcode:    & Barcode,
+    barcode:    & Barcode< FilRaw >,
     ) 
     -> 
-    SuperVec< usize > 
+    Vec< usize > 
+    where FilRaw: Ord + Clone + Hash
 {
 
     // compute dimension of boundary space in each degree
-    let mut quota       =   ranks.rank_boundaries_supervec();
+    let mut quota       =   ranks.rank_boundaries_vec();
     
     // subtract number of bars in each degree
     let mut num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim().vec;    
     for deg in 0 .. num_bars_fin_per_dim.len() {
-        quota.vec[ deg ] -= num_bars_fin_per_dim[ deg ]
+        quota[ deg ] -= num_bars_fin_per_dim[ deg ]
     }
 
     quota // this is a super vec
@@ -178,17 +234,17 @@ mod tests {
                                         vec![  (0, Ratio::new(1,1)),  (1, Ratio::new(-1,1))    ]
                                     ];
 
-        //  DEFINE THE CELL DIMENSIONS
-
+        //  define the cell dimensions
         let dims                =   vec![ 0, 0, 1];
         
+        //  compute ranks        
         let ranks               =   chain_cx_rank_nullity(
-                                        boundary, 
-                                        ring, 
+                                        boundary.clone(), 
+                                        ring.clone(), 
                                         & dims
                                     );
 
-
+        //  verify
         println!("{:?}", ranks.clone() );
 
         assert_eq!( 2, ranks.rank_chains( &0 ));
@@ -200,10 +256,45 @@ mod tests {
         assert_eq!( 1, ranks.rank_homology( &0 ));                                
         assert_eq!( 0, ranks.rank_homology( &1 ));         
         
-        assert_eq!( SuperVec{ vec: vec![2, 1], val: 0 }, ranks.rank_vec_chains() );
-        assert_eq!( SuperVec{ vec: vec![2, 0], val: 0 }, ranks.rank_cycles_supervec() );
-        assert_eq!( SuperVec{ vec: vec![1, 0], val: 0 }, ranks.rank_boundaries_supervec() );
-        assert_eq!( SuperVec{ vec: vec![1, 0], val: 0 }, ranks.rank_homology_supervec() );                                
-    }     
+        assert_eq!( vec![2, 1], ranks.rank_vec_chains() );
+        assert_eq!( vec![2, 0], ranks.rank_cycles_vec() );
+        assert_eq!( vec![1, 0], ranks.rank_boundaries_vec() );
+        assert_eq!( vec![1, 0], ranks.rank_homology_vec() );                                
+     
 
+        // ALTERNATE APPROACH !!! 
+        // ---------------------- 
+
+        // copy boundary
+        let mut reducindus          =   boundary.clone();
+
+        // reduce the copy
+        solar::reduce::vec_of_vec::right_reduce(
+            &mut reducindus,
+            ring.clone(),
+        );    
+
+        // extract the pairs + compute ranks
+        let pairs                   =   reduced_mat_to_pivot_index_pairs( &reducindus );
+        let ranks                   =   pairs_dims_to_chx_rank_nullity( 
+                                            & pairs,
+                                            & dims
+                                        );  
+        //  verify
+        println!("{:?}", ranks.clone() );
+
+        assert_eq!( 2, ranks.rank_chains( &0 ));
+        assert_eq!( 1, ranks.rank_chains( &1 ));
+        assert_eq!( 2, ranks.rank_cycles( &0 ));
+        assert_eq!( 0, ranks.rank_cycles( &1 ));
+        assert_eq!( 1, ranks.rank_boundaries( &0 ));                                
+        assert_eq!( 0, ranks.rank_boundaries( &1 ));                                
+        assert_eq!( 1, ranks.rank_homology( &0 ));                                
+        assert_eq!( 0, ranks.rank_homology( &1 ));         
+        
+        assert_eq!( vec![2, 1], ranks.rank_vec_chains() );
+        assert_eq!( vec![2, 0], ranks.rank_cycles_vec() );
+        assert_eq!( vec![1, 0], ranks.rank_boundaries_vec() );
+        assert_eq!( vec![1, 0], ranks.rank_homology_vec() );   
+    }
 }
