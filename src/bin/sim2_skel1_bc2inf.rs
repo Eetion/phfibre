@@ -1,6 +1,6 @@
 
 use solar::utilities::index::BiMapSequential;
-use phfibre::phfibre::{Node, explore};
+use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
 use phfibre::facets::{ordered_subsimplices_up_to_dim_concatenated, boundary_matrix_from_complex_facets};
 use num::rational::Ratio;
@@ -8,7 +8,7 @@ use num::rational::Ratio;
 
 
 type RingEltRational = Ratio<i64>;
-type RingOpRational = solar::rings::ring_native::NativeDivisionRing<f64>;
+type RingOpRational = solar::rings::ring_native::NativeDivisionRing<Ratio<i64>>;
 
 
 
@@ -88,6 +88,14 @@ fn main() {
     for result in results.iter().cloned().enumerate() {
         println!("{:?}", result)
     }    
+
+    for (result_count, result) in results.iter().cloned().enumerate() {
+        println!("result number {:?}", result_count);
+        verify_that_barcode_is_compatible( 
+            & root,
+            & result
+        );
+    }
 
 
 }  

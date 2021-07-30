@@ -1,9 +1,9 @@
 
 use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
-use crate::rank_calculations::*;
+use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
-use solar::utilities::index::{SuperVec, SuperIndex};
+use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
@@ -142,13 +142,13 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
         let lev_set_sizes           =   LevelSetSizes{ pointers: vec![0] };
 
         // polytope
-        let polytope                =   Polytope{ 
-                                            data_l_to_fmin:   Vec::new(), 
+        let mut polytope            =   Polytope{ 
+                                            data_l_to_fmin:   vec![0],   // why initialize this way?  because, when recursing, we often initialize a new empty set; indeed, this is **the way** we start new level sets; this is consistent with that
                                             data_c_to_l:      Vec::from_iter( 
                                                                 std::iter::repeat( num_cells )
                                                                 .take( num_cells )
                                                             )
-                                        };
+                                        };              
         
         // all empty level sets are degenerate (i.e. not critical)
         let lev_set_is_crit         =   false;
@@ -380,6 +380,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                 // mark child's level set as critical (posisbly redundantly)
                 child.lev_set_is_crit   =   true;
+                child.polytope.ensure_last_lev_set_critical();
 
                 // move bar and positive cell
                 let _    =   child.cell_ids_out[ bar_new.dim() ].swap_remove(pos_id_out_count);      // remove cell from "out list"
@@ -832,5 +833,84 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 }
 
 //  ---------------------------------------------------------------------------  
-//  EXPLORE TREE
+//  CHECK BARCODE
 //  ---------------------------------------------------------------------------  
+
+
+pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt >( 
+            root_node:  &   Node< FilRaw, RingOp, RingElt >, 
+            result:     &   Polytope
+        )
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:    Clone + Debug + PartialOrd + Ord,
+            FilRaw:     Clone + Debug + Ord + Hash        
+{
+
+    let num_cells               =   root_node.cells_all.len();
+
+    // compute the sorting permutation
+    let new_to_old              =   sort_perm( &result.data_c_to_l  ); 
+    let old_to_new              =   inverse_perm( &new_to_old );
+
+    // make copy of boundary matrix with permuted columns -- note we must convert FROM new indices TO old indices
+    let mut reducindus_permuted =   Vec::from_iter( new_to_old.iter().map(|&x| root_node.boundary[x].clone()) );
+
+    // permute row indices and sort rows
+    for col_index in 0 .. num_cells {
+        let mut vec             =   reducindus_permuted[ col_index ].clone();
+        for row_pointer in 0 .. vec.len() {
+            let row_index           =   vec[ row_pointer ].0.clone();
+            vec[ row_pointer ].0    =   old_to_new[ row_index ];       // note we must convert FROM old indices TO new indices     
+        }
+        vec.sort();
+        reducindus_permuted[ col_index ]    =   vec;
+    }
+
+    // reduce
+    solar::reduce::vec_of_vec::right_reduce(
+        &mut reducindus_permuted,
+        root_node.ring.clone(),
+    );    
+
+    // extract the pairs + compute the barcode
+    let pairs                   =   reduced_mat_to_pivot_index_pairs( &reducindus_permuted );
+
+    // obtain permuted dimension vector (WE MUST ACCOUNT FOR THE PERMUTATION)
+    let cell_dims               =   Vec::from_iter(
+                                        new_to_old.iter().map(|&x| root_node.cells_all[ x ].dim )
+                                    );    
+
+    // calculate cell births
+    // obtain permuted dimension vector (WE MUST ACCOUNT FOR THE PERMUTATION)
+    let births                  =   Vec::from_iter(
+                                        new_to_old
+                                            .iter()
+                                            .map(   |&x| 
+                                                    result.cell_id_to_fmin( x ).unwrap()  // recall that this returns ordinals of barcode endpoints
+                                            )
+                                            .map(   |x|
+                                                    root_node.barcode.ordinal.val( x ).unwrap() // in light of preceding comment, we must convert back to raw filtration values
+                                            )
+                                    );        
+
+    // compute the proposed barcode (with sorted entries)
+    let mut barcode_proposed    =   pairs_dims_births_to_barcode(
+                                        & pairs,
+                                        & cell_dims,
+                                        & births
+                                    );
+
+    barcode_proposed.inf.sort();
+    barcode_proposed.fin.sort();
+
+    // compute the objective barcode (with sorted entries)
+
+    let mut barcode_true        =   root_node.barcode.clone();
+    barcode_true.inf.sort();
+    barcode_true.fin.sort();
+
+    assert_eq!( &barcode_proposed.inf, &barcode_true.inf );
+    assert_eq!( &barcode_proposed.fin, &barcode_true.fin );    
+    assert_eq!( &barcode_proposed.ordinal.ord_to_val, &barcode_true.ordinal.ord_to_val );        
+
+}            

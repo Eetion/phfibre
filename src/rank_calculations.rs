@@ -18,7 +18,7 @@ type Cell = usize;
 //  COMPUTE PIVOT INDEX PAIRS FROM REDUCED MATRIX
 //  ---------------------------------------------------------------------------
 
-fn reduced_mat_to_pivot_index_pairs< T >( reduced_mat: &Vec< Vec< (usize,T)> >) 
+pub fn  reduced_mat_to_pivot_index_pairs< T >( reduced_mat: &Vec< Vec< (usize,T)> >) 
     -> 
     Vec< (usize, usize) >  
 {

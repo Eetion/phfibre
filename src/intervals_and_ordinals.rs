@@ -34,8 +34,8 @@ pub fn to_ordered_float( v: & Vec< f64 > ) -> Vec< OrderedFloat< f64> > { v.iter
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OrdinalData < T : Ord + Eq + PartialOrd + PartialEq + Hash > {
-    ord_to_val:  Vec< T >,
-    val_to_ord:  HashMap< T, usize >
+    pub ord_to_val:  Vec< T >,
+    pub val_to_ord:  HashMap< T, usize >
 }
 
 impl    < T >
@@ -305,53 +305,53 @@ Barcode< FilRaw >
 where FilRaw: Ord + Clone + Hash
 {
 
-let ordinal         =   ordinate( &births );
+    let ordinal         =   ordinate( &births );
 
-let num_cells           =   dims.len();
-let mut num_bars_fin    =   0;
-let mut num_bars_inf    =   num_cells;
-let mut essential       =   Vec::from_iter( iter::repeat(true).take(num_cells) );
+    let num_cells           =   dims.len();
+    let mut num_bars_fin    =   0;
+    let mut num_bars_inf    =   num_cells;
+    let mut essential       =   Vec::from_iter( iter::repeat(true).take(num_cells) );
 
-// count
-for pair in pairs {
-essential[ pair.0 ]     =   false;
-essential[ pair.1 ]     =   false;
-num_bars_inf            -=  2;
-if births[ pair.0 ] != births[ pair.1 ] { num_bars_fin +=1 }
-}
+    // count
+    for pair in pairs {
+    essential[ pair.0 ]     =   false;
+    essential[ pair.1 ]     =   false;
+    num_bars_inf            -=  2;
+    if births[ pair.0 ] != births[ pair.1 ] { num_bars_fin +=1 }
+    }
 
-let mut inf             =   Vec::with_capacity( num_bars_inf );
-let mut fin             =   Vec::with_capacity( num_bars_fin );
+    let mut inf             =   Vec::with_capacity( num_bars_inf );
+    let mut fin             =   Vec::with_capacity( num_bars_fin );
 
-// push finite bars
-for pair in pairs {
-if births[ pair.0 ] != births[ pair.1 ] { 
-    fin.push(
-        BarFinite{ 
-            dim:    dims[ pair.0 ], 
-            birth:  ordinal.ord( &births[ pair.0 ] ).unwrap(),
-            death:  ordinal.ord( &births[ pair.1 ] ).unwrap(),
-        }
-    )
-}
-}
+    // push finite bars
+    for pair in pairs {
+    if births[ pair.0 ] != births[ pair.1 ] { 
+        fin.push(
+            BarFinite{ 
+                dim:    dims[ pair.0 ], 
+                birth:  ordinal.ord( &births[ pair.0 ] ).unwrap(),
+                death:  ordinal.ord( &births[ pair.1 ] ).unwrap(),
+            }
+        )
+    }
+    }
 
-// push infinite bars
-for cell_id in 0 .. num_cells {
-if essential[ cell_id ] {
-    inf.push(
-        BarInfinite{
-            dim: dims[ cell_id ],
-            birth: ordinal.ord( &births[ cell_id ] ).unwrap(),
-        }
-    )
-}
-}
+    // push infinite bars
+    for cell_id in 0 .. num_cells {
+    if essential[ cell_id ] {
+        inf.push(
+            BarInfinite{
+                dim: dims[ cell_id ],
+                birth: ordinal.ord( &births[ cell_id ] ).unwrap(),
+            }
+        )
+    }
+    }
 
-Barcode{
-inf:        inf,
-fin:        fin,
-ordinal:    ordinal
+    Barcode{
+    inf:        inf,
+    fin:        fin,
+    ordinal:    ordinal
 }
 
 }     
@@ -456,7 +456,7 @@ impl Polytope {
     pub fn lev_set_last_is_critical( &self ) -> Option<bool> {  
         match self.num_lev_sets() == 0 { 
             true => None, 
-            false => self.lev_set_ord_to_is_critical( self.num_lev_sets() )
+            false => self.lev_set_ord_to_is_critical( self.num_lev_sets() -1 )
         }
     }
 
