@@ -241,104 +241,108 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             node.polytope.lev_set_last_is_critical() == Some( true )
             ||
             ! node.last_must_be_crit
-        )
-    {
+        )           
+        
+        {
+
         // we may have alread constructed an equivalent filtration (just with a different order
         // on cells within a level set).  if we haven't then push to results.
         if ! results.contains( & node.polytope ) {
             results.push( node.polytope.clone() ); 
         }
+
     }
 
-    //  TERMINATE CONSTRUCTION OF PRESENT LEVEL SET; INITIALIZE NEW LEVEL SET 
-    //  ---------------------------------------------------------------------
+    else {    
+
+        //  IF FEASIBLE, INITIALIZE NEW LEVEL SET 
+        //  ---------------------------------------------------------------------
      
-    else if node.lev_set_sizes.size_last() != Some( 0 ) &&  // current level set is nonempty 
-            node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
-            (                                               // C-rule (critical) 
-                (
-                   !node.polytope                           // the level set contains no "critical" cell
-                        .lev_set_last_is_critical()
-                        .unwrap() 
-                )                          
-                ||                                              // OR
-                (                                               // I_cur is empty
-                    node.bar_ids_now_inf_brn.is_empty() &&     
-                    node.bar_ids_now_fin_brn.is_empty() &&    
-                    node.bar_ids_now_fin_die.is_empty()    
-                )
-            )                                       
+        if node.lev_set_sizes.size_last() != Some( 0 ) &&  // current level set is nonempty 
+                node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
+                (                                               // C-rule (critical) 
+                    (
+                    !node.polytope                           // the level set contains no "critical" cell
+                            .lev_set_last_is_critical()
+                            .unwrap() 
+                    )                          
+                    ||                                              // OR
+                    (                                               // I_cur is empty
+                        node.bar_ids_now_inf_brn.is_empty() &&     
+                        node.bar_ids_now_fin_brn.is_empty() &&    
+                        node.bar_ids_now_fin_die.is_empty()    
+                    )
+                )                                       
 
-            //  THIS CODE CAUSED PROBLEMS AND I THINK IT'S OK TO DELETE
-            // &&
-            // node.barcode                                    // the current level set does not map to 1.0
-            //     .ordinal
-            //     .val( node.bc_endpoint_now )
-            //     != Some( OrderedFloat( 1.0 ) )
+                //  THIS CODE CAUSED PROBLEMS AND I THINK IT'S OK TO DELETE
+                // &&
+                // node.barcode                                    // the current level set does not map to 1.0
+                //     .ordinal
+                //     .val( node.bc_endpoint_now )
+                //     != Some( OrderedFloat( 1.0 ) )
 
-        {
+            {
 
-        // CREATE CHILD NODE    
-    
-        let mut child                   =   node.clone();
+            // CREATE CHILD NODE    
+        
+            let mut child                   =   node.clone();
 
-        // APPEND NEW COUNTER FOR LEVEL SET SIZE
+            // APPEND NEW COUNTER FOR LEVEL SET SIZE
 
-        child.lev_set_sizes.postpend_empty_set();       // post-pend new entry (= 0) to vector of level set sizes
-        child.polytope.push_new_lev_set();              // post-pend new level set to polytope object (note this object doesn't have a well formed notion of an empty level set)
+            child.lev_set_sizes.postpend_empty_set();       // post-pend new entry (= 0) to vector of level set sizes
+            child.polytope.push_new_lev_set();              // post-pend new level set to polytope object (note this object doesn't have a well formed notion of an empty level set)
 
-        // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
+            // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
 
-        // NB: we don't check that bc_endpoint_now < maximum_endpoint; nothing bad happens
-        // if this is indeed the case; one simply obtains three empty sets (moreover, this doesn't
-        // produce an infinite loop, because we only reach this point after creating a new
-        // nonempty level set.
+            // NB: we don't check that bc_endpoint_now < maximum_endpoint; nothing bad happens
+            // if this is indeed the case; one simply obtains three empty sets (moreover, this doesn't
+            // produce an infinite loop, because we only reach this point after creating a new
+            // nonempty level set.
 
-        if  node.polytope.lev_set_last_is_critical().unwrap()  { 
+            if  node.polytope.lev_set_last_is_critical().unwrap()  { 
+                
+                // update barcode endpoint
+
+                // child.polytope.ensure_last_lev_set_critical();
+                
+                let bc_endpoint_now         =   child.polytope.last_of_all_filtration_ordinals().unwrap() + 1;
+
+
+                // update set of bars to account for
+                child.bar_ids_now_inf_brn   =   child.barcode_inverse
+                                                    .inf_brn
+                                                    .sindex( bc_endpoint_now, vec![] )
+                                                    .clone();
+
+                child.bar_ids_now_fin_brn   =   child.barcode_inverse
+                                                    .fin_brn
+                                                    .sindex( bc_endpoint_now, vec![] )
+                                                    .clone();            
+                
+                child.bar_ids_now_fin_die   =   child.barcode_inverse
+                                                    .fin_die
+                                                    .sindex( bc_endpoint_now, vec![] )
+                                                    .clone();                        
+
+            }
+
+            // RUN EXPLORE ON CHILD
+
+            // println!("BOUNDARY:");
+            // for col in child.boundary.iter() {
+            //     println!("{:?}", &col)
+            // }
+            println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+            println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+            println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
             
-            // update barcode endpoint
-
-            // child.polytope.ensure_last_lev_set_critical();
+            println!("CALL 1: INITIALIZED NEW LEV SET");
+            explore( & child, results );
             
-            let bc_endpoint_now         =   child.polytope.last_of_all_filtration_ordinals().unwrap() + 1;
-
-
-            // update set of bars to account for
-            child.bar_ids_now_inf_brn   =   child.barcode_inverse
-                                                .inf_brn
-                                                .sindex( bc_endpoint_now, vec![] )
-                                                .clone();
-
-            child.bar_ids_now_fin_brn   =   child.barcode_inverse
-                                                .fin_brn
-                                                .sindex( bc_endpoint_now, vec![] )
-                                                .clone();            
-            
-            child.bar_ids_now_fin_die   =   child.barcode_inverse
-                                                .fin_die
-                                                .sindex( bc_endpoint_now, vec![] )
-                                                .clone();                        
-
         }
 
-        // RUN EXPLORE ON CHILD
-
-        // println!("BOUNDARY:");
-        // for col in child.boundary.iter() {
-        //     println!("{:?}", &col)
-        // }
-        println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-        println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-        println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
-        
-        println!("CALL 1: INITIALIZED NEW LEV SET");
-        explore( & child, results );
-        
-    }
-
-    //  ENLARGE LEVEL SET 
-    //  ---------------------------------------------------------------------
-    else {
+        //  ENLARGE CURRENT LEVEL SET 
+        //  ---------------------------------------------------------------------
 
         //  ADD BIRTH CELL FOR AN *INFINITE* BAR 
         //  ------------------------------------
@@ -450,7 +454,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 child.polytope.ensure_last_lev_set_critical();
                 
                 // move bar_id
-                let _    =   child.bar_ids_now_inf_brn.swap_remove(bar_id_count);   // remove bar from list of bars that have unaccounted endpoints here
+                let _    =   child.bar_ids_now_fin_brn.swap_remove(bar_id_count);   // remove bar from list of bars that have unaccounted endpoints here
                 child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
 
                 // move pos_id_out
@@ -522,9 +526,64 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                 .map( |x| x.0 )
                                                 .max()
                                                 .map( |x| x.clone() );
+                                               
 
                 // short-circuit if the column is empty                                                 
                 if low_id_opt == None { continue }
+
+
+
+
+
+
+//-------------------------------------------------------------------------------------------------
+                // // find the lowest nonzero entry in this column
+                // let low_birth_and_id_opt    =   node.boundary
+                //                                     [ neg_id ]  
+                //                                     .iter()
+                //                                     .map(   |x| 
+                //                                             (   
+                //                                                 node.cells_all[ x.0 ].birth_ordinal.clone(),   
+                //                                                 x.0.clone())                            
+                //                                             )
+                //                                     .max();                
+
+                // // short-circuit if the column is empty                                                 
+                // if low_birth_and_id_opt == None { continue }
+
+                // // unwrap the bottom index
+                // let low_birth_and_id            =   low_birth_and_id_opt.unwrap();
+
+
+                // //   IF  every cell in the support of this column has been assigned a birth ordinal 
+                // //  AND  low_id corresponds to a positive degenerate cell
+                // // THEN  add a negative degenerate cell
+                // if  low_birth_and_id.0 < node.cells_all.len()  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                //     &&  
+                //     node.polytope.cell_id_to_fmin( low_id.clone() ).unwrap() == bar_new.birth()
+                //     &&
+                //     node.cell_ids_pos_crit.contains( & low_id )
+//-------------------------------------------------------------------------------------------------                    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
                 // unwrap the bottom index
                 let low_id              =   low_id_opt.unwrap();
@@ -532,6 +591,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 //   IF  every cell in the support of this column has been assigned a birth ordinal 
                 //  AND  low_id corresponds to a positive cell with the correct birth time
                 // THEN  add a positive critical cell
+                println!("low_id ======== {:?}", low_id.clone() );
                 if  low_id < node.cells_all.len()   // this first condition helps to short circuit / avoid expensive look-ups in the hash set
                     &&  
                     node.polytope.cell_id_to_fmin( low_id.clone() ).unwrap() == bar_new.birth()
