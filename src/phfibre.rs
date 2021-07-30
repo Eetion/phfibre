@@ -79,14 +79,11 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt>
 
     ring:                   RingOp,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
-    bc_endpoint_now:        usize,                          // the (ordinal) barcode endpoint of concern for this (or some future) level set
 
     bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension    
 
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
     polytope:               Polytope,    
-
-    lev_set_is_crit:        bool,                           // true iff current level set contains a "critical cell"
     
     cells_all:              Vec< CellEntry >,               // all cells
     cell_ids_out:           Vec< Vec< usize > >,            // cells not yet assigned a birth,
@@ -126,7 +123,6 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
 
         let num_cells               =   cell_dims.len();       
         let boundary_buffer         =   Vec::new();
-        let bc_endpoint_now         =   0;
 
         // compute degenrate bar quotas
         let ranks                   =   chain_cx_rank_nullity(
@@ -149,9 +145,7 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
                                                                 .take( num_cells )
                                                             )
                                         };              
-        
-        // all empty level sets are degenerate (i.e. not critical)
-        let lev_set_is_crit         =   false;
+
 
         // cell registry
         let mut cells_all           =   Vec::with_capacity( num_cells );
@@ -179,6 +173,8 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
         let bar_ids_dun_fin         =   Vec::new();
         let bar_ids_dun_inf         =   Vec::new();
 
+
+        let bc_endpoint_now         =   polytope.last_of_all_filtration_ordinals().unwrap(); // equals 0
         let bar_ids_now_inf_brn     =   barcode_inverse
                                             .inf_brn
                                             [ bc_endpoint_now ]
@@ -197,11 +193,9 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
             barcode_inverse:    &   barcode_inverse,
             ring:                   ring.clone(),
             boundary_buffer:        boundary_buffer,
-            bc_endpoint_now:        bc_endpoint_now,
             bars_degn_quota:        bars_degn_quota,
             lev_set_sizes:          lev_set_sizes,
             polytope:               polytope,
-            lev_set_is_crit:        lev_set_is_crit,
             cells_all:              cells_all,
             cell_ids_out:           cell_ids_out,
             cell_ids_pos_crit:      cell_ids_pos_crit,
@@ -263,7 +257,9 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
             (                                               // C-rule (critical) 
                 (
-                    ! node.lev_set_is_crit                      // the level set contains no "critical" cell
+                   !node.polytope                           // the level set contains no "critical" cell
+                        .lev_set_last_is_critical()
+                        .unwrap() 
                 )                          
                 ||                                              // OR
                 (                                               // I_cur is empty
@@ -293,49 +289,47 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
         // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
 
-        // NB: we don't check that child.bc_endpoint_now < maximum_endpoint; nothing bad happens
+        // NB: we don't check that bc_endpoint_now < maximum_endpoint; nothing bad happens
         // if this is indeed the case; one simply obtains three empty sets (moreover, this doesn't
         // produce an infinite loop, because we only reach this point after creating a new
         // nonempty level set.
 
-        if  node.lev_set_is_crit  { 
-
-            // since we are creating a new level set, place child.lev_set_is_crit = false
-            // this value remains false as long as the new level set remains empty 
-            child.lev_set_is_crit       =   false;          
+        if  node.polytope.lev_set_last_is_critical().unwrap()  { 
             
             // update barcode endpoint
-            child.bc_endpoint_now       +=  1;
+
+            // child.polytope.ensure_last_lev_set_critical();
+            
+            let bc_endpoint_now         =   child.polytope.last_of_all_filtration_ordinals().unwrap() + 1;
+
 
             // update set of bars to account for
             child.bar_ids_now_inf_brn   =   child.barcode_inverse
                                                 .inf_brn
-                                                .sindex( child.bc_endpoint_now, vec![] )
+                                                .sindex( bc_endpoint_now, vec![] )
                                                 .clone();
 
             child.bar_ids_now_fin_brn   =   child.barcode_inverse
                                                 .fin_brn
-                                                .sindex( child.bc_endpoint_now, vec![] )
+                                                .sindex( bc_endpoint_now, vec![] )
                                                 .clone();            
             
             child.bar_ids_now_fin_die   =   child.barcode_inverse
                                                 .fin_die
-                                                .sindex( child.bc_endpoint_now, vec![] )
+                                                .sindex( bc_endpoint_now, vec![] )
                                                 .clone();                        
 
         }
 
         // RUN EXPLORE ON CHILD
 
-        println!("BOUNDARY:");
-        for col in child.boundary.iter() {
-            println!("{:?}", &col)
-        }
-        println!("POLYTOPE:");
-        println!("{:?}", & child.polytope.data_c_to_l);    
-    
-        println!("CELL IDS OUT:");
-        println!("{:?}", & child.cell_ids_out );          
+        // println!("BOUNDARY:");
+        // for col in child.boundary.iter() {
+        //     println!("{:?}", &col)
+        // }
+        println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+        println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+        println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
         
         println!("CALL 1: INITIALIZED NEW LEV SET");
         explore( & child, results );
@@ -362,9 +356,9 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                     .iter()
                                                     .cloned()
                                                     .enumerate()
-                .filter(    |x| 
-                            node.boundary[x.1.clone()]
-                                .is_empty()
+                                                    .filter(    |x| 
+                                                                node.boundary[x.1.clone()]
+                                                                    .is_empty()
                     )  
             {   
 
@@ -378,8 +372,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 // create child node
                 let mut child   =   node.clone();                                   // this must come before swap_remove
 
-                // mark child's level set as critical (posisbly redundantly)
-                child.lev_set_is_crit   =   true;
+                // mark child's current level set as critical (posisbly redundantly)
                 child.polytope.ensure_last_lev_set_critical();
 
                 // move bar and positive cell
@@ -407,14 +400,15 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 // RUN EXPLORE ON CHILD
 
                 println!("BOUNDARY:");
-                for col in child.boundary.iter() {
-                    println!("{:?}", &col)
+                for col in child.boundary.iter().skip(2) {
+                    println!("{:?}", &col);
                 }
-                println!("POLYTOPE:");
-                println!("{:?}", & child.polytope.data_c_to_l);    
-            
-                println!("CELL IDS OUT:");
-                println!("{:?}", & child.cell_ids_out );                   
+                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));   
+                println!("child.bar_ids_now_inf_brn: {:?}", &child.bar_ids_now_inf_brn);   
+                println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);                   
+                
                 
                 println!("CALL 2: ADDED BIRTH CELL FOR INF BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
@@ -448,13 +442,12 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                                     .is_empty()
                                                     )  
             {   
-                println!("ADDING FINITE POSITIVE CELL");
 
                 // create child node
                 let mut child   =   node.clone();                                   // this must come before swap_remove
 
                 // mark child's level set as critical (posisbly redundantly)
-                child.lev_set_is_crit   =   true;
+                child.polytope.ensure_last_lev_set_critical();
                 
                 // move bar_id
                 let _    =   child.bar_ids_now_inf_brn.swap_remove(bar_id_count);   // remove bar from list of bars that have unaccounted endpoints here
@@ -487,15 +480,13 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                 // RUN EXPLORE ON CHILD
 
-                println!("BOUNDARY:");
-                for col in child.boundary.iter() {
-                    println!("{:?}", &col)
-                }
-                println!("POLYTOPE:");
-                println!("{:?}", & child.polytope.data_c_to_l);    
-            
-                println!("CELL IDS OUT:");
-                println!("{:?}", & child.cell_ids_out );                   
+                // println!("BOUNDARY:");
+                // for col in child.boundary.iter() {
+                //     println!("{:?}", &col)
+                // }
+                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                
                 
                 println!("CALL 3: ADDED BIRTH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
@@ -560,7 +551,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                     let mut child   =   node.clone();                                           // this must come before swap_remove
 
                     // mark child's level set as critical (posisbly redundantly)
-                    child.lev_set_is_crit   =   true;
+                    child.polytope.ensure_last_lev_set_critical();
 
                     // move cells
                     let _           =   child.cell_ids_out[ bar_new.dim() ].swap_remove(neg_id_count);           // remove negative cell from "out list"
@@ -622,15 +613,13 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // RUN EXPLORE ON CHILD
 
-                    println!("BOUNDARY:");
-                    for col in child.boundary.iter() {
-                        println!("{:?}", &col)
-                    }
-                    println!("POLYTOPE:");
-                    println!("{:?}", & child.polytope.data_c_to_l);    
-                
-                    println!("CELL IDS OUT:");
-                    println!("{:?}", & child.cell_ids_out );                       
+                    // println!("BOUNDARY:");
+                    // for col in child.boundary.iter() {
+                    //     println!("{:?}", &col)
+                    // }
+                    println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                    println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                    println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                       
                     
                     println!("CALL 4: ADDED DEATH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                                                    
                     explore( & child, results );
@@ -699,15 +688,13 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                 // RUN EXPLORE ON CHILD
                 
-                println!("BOUNDARY:");
-                for col in child.boundary.iter() {
-                    println!("{:?}", &col)
-                }
-                println!("POLYTOPE:");
-                println!("{:?}", & child.polytope.data_c_to_l);    
-            
-                println!("CELL IDS OUT:");
-                println!("{:?}", & child.cell_ids_out );   
+                // println!("BOUNDARY:");
+                // for col in child.boundary.iter() {
+                //     println!("{:?}", &col)
+                // }
+                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) )); 
 
                 println!("CALL 5: ADDED BIRTH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone() );                                    
                 explore( & child, results );
@@ -814,16 +801,16 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // RUN EXPLORE ON CHILD
 
-                    println!("BOUNDARY:");
-                    for col in child.boundary.iter() {
-                        println!("{:?}", &col)
-                    }
-                    println!("POLYTOPE:");
-                    println!("{:?}", & child.polytope.data_c_to_l);    
-                
-                    println!("CELL IDS OUT:");
-                    println!("{:?}", & child.cell_ids_out );                       
-                    
+                    // println!("BOUNDARY:");
+                    // for col in child.boundary.iter() {
+                    //     println!("{:?}", &col)
+                    // }
+                    println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                    println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                    println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));
+                    println!("node.cell_ids_pos_degn: {:?}", &node.cell_ids_pos_degn);     
+                    println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);      
+                                        
                     println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );                                                                      
                     explore( & child, results );
                 }

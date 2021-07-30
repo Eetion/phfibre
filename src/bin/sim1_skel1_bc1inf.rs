@@ -21,7 +21,7 @@ fn main() {
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
 
-    let complex_facets      =   vec![  vec![0,1,2] ];
+    let complex_facets      =   vec![  vec![0,1] ];
 
     let simplex_sequence    =   ordered_subsimplices_up_to_dim_concatenated( &complex_facets, 1);    
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
@@ -36,8 +36,8 @@ fn main() {
     //  DEFINE THE BARCODE + INVERSE BARCODE
     //  ------------------------------------
 
-    let barcode_inf_dim     =   vec![0, 1];    
-    let barcode_inf_brn     =   to_ordered_float( & vec![0., 0.5] );
+    let barcode_inf_dim     =   vec![0];    
+    let barcode_inf_brn     =   to_ordered_float( & vec![0.] );
 
     let barcode_fin_dim     =   Vec::new();    
     let barcode_fin_brn     =   Vec::new();

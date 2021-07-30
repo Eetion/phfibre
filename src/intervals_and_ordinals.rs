@@ -437,7 +437,7 @@ impl Polytope {
     pub fn  num_lev_sets( &self ) -> usize { self.data_l_to_fmin.len() }    
 
     /// Rightmost finite filtration value
-    pub fn  max_filtration_value( &self ) -> Option<Fil> { self.data_l_to_fmin.iter().cloned().last() }
+    pub fn  last_of_all_filtration_ordinals( &self ) -> Option<Fil> { self.data_l_to_fmin.iter().cloned().last() }
 
     /// Given an ordinal, determine whether the corresponding level set is critical.
     pub fn  lev_set_ord_to_is_critical( &self, level_set_ordinal: usize ) -> Option<bool> { 
@@ -550,7 +550,7 @@ impl Polytope {
 
     /// Post-pend a new (empty) level set.
     pub fn  push_new_lev_set( &mut self )   {
-        match self.max_filtration_value() {
+        match self.last_of_all_filtration_ordinals() {
             // if the vector of level set filtration values is nonempty, add a repeat of the last element
             Some( fil_max ) =>  self.data_l_to_fmin.push( fil_max ),
             // otherwise the vector is empty, and we should append a 0
