@@ -2,7 +2,10 @@
 use solar::utilities::index::BiMapSequential;
 use phfibre::phfibre::{Node, explore};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::facets::{ordered_subsimplices_up_to_dim_concatenated, boundary_matrix_from_complex_facets};
+use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+    ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
+use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+    boundary_matrix_from_complex_facets     }; 
 use num::rational::Ratio;
 
 
@@ -23,7 +26,7 @@ fn main() {
 
     let complex_facets      =   vec![  vec![0,1,2] ];
 
-    let simplex_sequence    =   ordered_subsimplices_up_to_dim_concatenated( &complex_facets, 1);    
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
