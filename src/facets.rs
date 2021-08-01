@@ -2,7 +2,7 @@
 use solar::utilities::index::{BiMapSequential, compose_f_after_g, sort_perm, inverse_perm};
 use solar::utilities::ring::{MinusOneToPower};
 use solar::rings::ring::{Semiring, Ring};
-use crate::simplex::Simplex;
+use solar::cell_complexes::simplices::unweighted::Simplex;
 use std::cmp::Ordering;
 use std::collections::{HashSet, HashMap};
 use std::hash::Hash;
