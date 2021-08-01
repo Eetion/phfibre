@@ -134,6 +134,10 @@ impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt >
                                             & ranks,
                                             & barcode
                                         );
+        println!("initial quota: {:?}", &bars_degn_quota);
+        println!("rank vec: {:?}", ranks.rank_boundaries_vec());
+        println!("barcode.num_bars_fin_per_dim: {:?}", barcode.num_bars_fin_per_dim());
+
         // level set sizes
         let lev_set_sizes           =   LevelSetSizes{ pointers: vec![0] };
 
@@ -223,12 +227,43 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             FilRaw:     Clone + Debug + Ord + Hash
 { 
 
-    println!("{:?} {:?} {:?} {:?} {:?}",    &   node.bars_degn_quota,
-                                                node.lev_set_sizes.size_last()          ==  Some( 0 ),
-                                                node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
-                                                node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
-                                                node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf()                                        
-    );
+    let mut first_pass_was_true = false;
+
+    if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+        
+        println!("-------------------------");
+        println!("polytope: {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
+        println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",    
+                                                    &   node.bars_degn_quota,
+                                                    node.lev_set_sizes.size_last()          ==  Some( 0 ),
+                                                    node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
+                                                    node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
+                                                    node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf(),
+                                                    node.bar_ids_now_inf_brn.is_empty() &&     
+                                                    node.bar_ids_now_fin_brn.is_empty() &&    
+                                                    node.bar_ids_now_fin_die.is_empty(),
+                                                    node.polytope                           // the level set contains no "critical" cell
+                                                        .lev_set_last_is_critical()
+                                                        .unwrap(),                                                    
+                                                    node.polytope.num_lev_sets(),
+                                                    node.cell_ids_out
+
+                                                    // & node.bar_ids_dun_fin,
+                                                    // & node.barcode.num_bars_fin(),
+
+        );
+
+        println!("quota forbids: {:?}", node.bars_degn_quota.sindex( 0, 0 ) == 0);
+
+        println!("node.lev_set_sizes.last_level_set_ordinal() {:?}", &node.lev_set_sizes.last_level_set_ordinal());
+
+        // std::thread::sleep(
+        //     std::time::Duration::from_millis(1000)
+        // ) 
+        first_pass_was_true     =   true;
+    }
+
+
       
 
     //  PUSH LEAF NODE TO RESULTS
@@ -332,11 +367,11 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             // for col in child.boundary.iter() {
             //     println!("{:?}", &col)
             // }
-            println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-            println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-            println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
+            // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+            // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+            // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
             
-            println!("CALL 1: INITIALIZED NEW LEV SET");
+            // println!("CALL 1: INITIALIZED NEW LEV SET");
             explore( & child, results );
             
         }
@@ -403,18 +438,18 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                 // RUN EXPLORE ON CHILD
 
-                println!("BOUNDARY:");
-                for col in child.boundary.iter().skip(2) {
-                    println!("{:?}", &col);
-                }
-                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));   
-                println!("child.bar_ids_now_inf_brn: {:?}", &child.bar_ids_now_inf_brn);   
-                println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);                   
+                // println!("BOUNDARY:");
+                // for col in child.boundary.iter().skip(2) {
+                //     println!("{:?}", &col);
+                // }
+                // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));   
+                // println!("child.bar_ids_now_inf_brn: {:?}", &child.bar_ids_now_inf_brn);   
+                // println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);                   
                 
                 
-                println!("CALL 2: ADDED BIRTH CELL FOR INF BAR OF DIM {:?}", bar_new.dim());                
+                // println!("CALL 2: ADDED BIRTH CELL FOR INF BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
             }
         } 
@@ -455,7 +490,6 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 
                 // move bar_id
                 let _    =   child.bar_ids_now_fin_brn.swap_remove(bar_id_count);   // remove bar from list of bars that have unaccounted endpoints here
-                child.bar_ids_dun_inf.push( bar_id );                               // add bar to "done" list (consumes variable)
 
                 // move pos_id_out
                 let _    =   child.cell_ids_out[ bar_new.dim() ].swap_remove(pos_id_out_count);      // remove cell from "out list"
@@ -488,11 +522,11 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 // for col in child.boundary.iter() {
                 //     println!("{:?}", &col)
                 // }
-                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                
+                // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                
                 
-                println!("CALL 3: ADDED BIRTH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                
+                // println!("CALL 3: ADDED BIRTH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                
                 explore( & child, results );
 
             }
@@ -519,85 +553,39 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                 .enumerate()
             {
 
-                // find the lowest nonzero entry in this column
-                let low_id_opt        =    node.boundary
-                                                [ neg_id ]  
-                                                .iter()
-                                                .map( |x| x.0 )
-                                                .max()
-                                                .map( |x| x.clone() );
-                                               
-
-                // short-circuit if the column is empty                                                 
-                if low_id_opt == None { continue }
-
-
 
 
 
 
 //-------------------------------------------------------------------------------------------------
-                // // find the lowest nonzero entry in this column
-                // let low_birth_and_id_opt    =   node.boundary
-                //                                     [ neg_id ]  
-                //                                     .iter()
-                //                                     .map(   |x| 
-                //                                             (   
-                //                                                 node.cells_all[ x.0 ].birth_ordinal.clone(),   
-                //                                                 x.0.clone())                            
-                //                                             )
-                //                                     .max();                
+                // find the lowest nonzero entry in this column
+                let low_birthord_and_id_opt    =   node.boundary
+                                                    [ neg_id ]  
+                                                    .iter()
+                                                    .map(   |x| 
+                                                            (   
+                                                                node.cells_all[ x.0 ].birth_ordinal.clone(),   
+                                                                x.0.clone())                            
+                                                            )
+                                                    .max();                
 
-                // // short-circuit if the column is empty                                                 
-                // if low_birth_and_id_opt == None { continue }
-
-                // // unwrap the bottom index
-                // let low_birth_and_id            =   low_birth_and_id_opt.unwrap();
-
-
-                // //   IF  every cell in the support of this column has been assigned a birth ordinal 
-                // //  AND  low_id corresponds to a positive degenerate cell
-                // // THEN  add a negative degenerate cell
-                // if  low_birth_and_id.0 < node.cells_all.len()  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
-                //     &&  
-                //     node.polytope.cell_id_to_fmin( low_id.clone() ).unwrap() == bar_new.birth()
-                //     &&
-                //     node.cell_ids_pos_crit.contains( & low_id )
-//-------------------------------------------------------------------------------------------------                    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                // short-circuit if the column is empty                                                 
+                if low_birthord_and_id_opt == None { continue }
 
                 // unwrap the bottom index
-                let low_id              =   low_id_opt.unwrap();
+                let low_birthord_and_id            =   low_birthord_and_id_opt.unwrap();            
+
 
                 //   IF  every cell in the support of this column has been assigned a birth ordinal 
-                //  AND  low_id corresponds to a positive cell with the correct birth time
-                // THEN  add a positive critical cell
-                println!("low_id ======== {:?}", low_id.clone() );
-                if  low_id < node.cells_all.len()   // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                //  AND  low_id corresponds to a positive degenerate cell
+                // THEN  add a negative degenerate cell
+                if  low_birthord_and_id.0 < node.cells_all.len()  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
                     &&  
-                    node.polytope.cell_id_to_fmin( low_id.clone() ).unwrap() == bar_new.birth()
+                    node.polytope.cell_id_to_fmin( low_birthord_and_id.1.clone() ).unwrap() == bar_new.birth()
                     &&
-                    node.cell_ids_pos_crit
-                        .contains( & low_id )
+                    node.cell_ids_pos_crit.contains( & low_birthord_and_id.1 )
+//-------------------------------------------------------------------------------------------------                    
+
                 {
 
                     // update: 
@@ -614,8 +602,8 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                     child.polytope.ensure_last_lev_set_critical();
 
                     // move cells
-                    let _           =   child.cell_ids_out[ bar_new.dim() ].swap_remove(neg_id_count);           // remove negative cell from "out list"
-                    child.cell_ids_pos_crit.remove( & low_id );                                   // remove positive cell from set of unmatched positive cells
+                    let _           =   child.cell_ids_out[ bar_new.dim() + 1 ].swap_remove(neg_id_count);       // remove negative cell from "out list"
+                    child.cell_ids_pos_crit.remove( & low_birthord_and_id.1 );                                   // remove positive cell from set of unmatched positive cells
 
                     // move bar
                     let _           =   child.bar_ids_now_fin_die.swap_remove(bar_id_count);    // remove bar from "unadded list"
@@ -641,7 +629,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // record the pairing in the central registry
                     child.cells_all
-                        [ low_id ]
+                        [ low_birthord_and_id.1 ]
                         .bounding_cell_id
                                     =   neg_id.clone();
 
@@ -677,11 +665,11 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                     // for col in child.boundary.iter() {
                     //     println!("{:?}", &col)
                     // }
-                    println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-                    println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-                    println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                       
+                    // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                    // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                    // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                       
                     
-                    println!("CALL 4: ADDED DEATH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                                                    
+                    // println!("CALL 4: ADDED DEATH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                                                    
                     explore( & child, results );
                 }
             }
@@ -689,6 +677,11 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
         //  ADD BIRTH CELL FOR A *DEGENERATE* BAR 
         //  -------------------------------------
+
+        if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+            println!("WILL TRY TO ADD SOME DEGENERATE CELLS!");
+            println!("NODE WAS COMPATIBLE FROM THE START: {:?}", first_pass_was_true)
+        }          
 
         // loop over all dimensions
         for dim in 0..node.cell_ids_out.len() {
@@ -710,9 +703,11 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                                     .is_empty()
                                                     )  
             {   
-
-                println!("a candidate for degenerate positive cell: {:?}", & pos_id_out );
                 
+
+                if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+                    println!("polytope BEFORE: {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
+                }                
                 // update: 
                 //  lev_set_sizes 
                 //  cells_all
@@ -747,16 +742,23 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                 child.bars_degn_quota[dim] -= 1;         // drop the quota for degenerate bars by 1
 
                 // RUN EXPLORE ON CHILD
+
+                if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+                    println!("child polytope AFTER:  {:?}", & child.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
+                    println!("node  polytope AFTER:  {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() ); 
+                    println!("child full polytope:  {:?}", & child.polytope );                                                           
+                    println!("{:?}", child.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ));
+                }                                
                 
                 // println!("BOUNDARY:");
                 // for col in child.boundary.iter() {
                 //     println!("{:?}", &col)
                 // }
-                println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-                println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-                println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) )); 
+                // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) )); 
 
-                println!("CALL 5: ADDED BIRTH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone() );                                    
+                // println!("CALL 5: ADDED BIRTH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone() );                                    
                 explore( & child, results );
             }
         }
@@ -776,7 +778,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             {
 
                 // find the lowest nonzero entry in this column
-                let low_birth_and_id_opt    =   node.boundary
+                let low_birthord_and_id_opt =   node.boundary
                                                     [ neg_id ]  
                                                     .iter()
                                                     .map(   |x| 
@@ -787,17 +789,17 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                     .max();                
 
                 // short-circuit if the column is empty                                                 
-                if low_birth_and_id_opt == None { continue }
+                if low_birthord_and_id_opt == None { continue }
 
                 // unwrap the bottom index
-                let low_birth_and_id            =   low_birth_and_id_opt.unwrap();
+                let low_birthord_and_id            =   low_birthord_and_id_opt.unwrap();
 
 
                 //   IF  every cell in the support of this column has been assigned a birth ordinal 
                 //  AND  low_id corresponds to a positive degenerate cell
                 // THEN  add a negative degenerate cell
-                if  low_birth_and_id.0 < node.cells_all.len() &&  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
-                    node.cell_ids_pos_degn.contains( & low_birth_and_id.1 ) 
+                if  low_birthord_and_id.0 < node.cells_all.len() &&  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                    node.cell_ids_pos_degn.contains( & low_birthord_and_id.1 ) 
                 {
 
                     // update: 
@@ -812,7 +814,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // move cells
                     let _           =   child.cell_ids_out[ dim ].swap_remove( neg_id_count );         // remove negative cell from "out list"
-                    child.cell_ids_pos_degn.remove( & low_birth_and_id.1 );                     // remove positive cell from set of unmatched positive cells
+                    child.cell_ids_pos_degn.remove( & low_birthord_and_id.1 );                     // remove positive cell from set of unmatched positive cells
 
                     // record the birth ordinal of the added cell in the central registry
                     child
@@ -833,7 +835,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // record the pairing in the central registry
                     child.cells_all
-                        [ low_birth_and_id.1 ]
+                        [ low_birthord_and_id.1 ]
                         .bounding_cell_id
                                     =   neg_id.clone();
 
@@ -865,13 +867,13 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                     // for col in child.boundary.iter() {
                     //     println!("{:?}", &col)
                     // }
-                    println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
-                    println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
-                    println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));
-                    println!("node.cell_ids_pos_degn: {:?}", &node.cell_ids_pos_degn);     
-                    println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);      
+                    // println!("POLYTOPE: {:?}", & child.polytope.data_c_to_l);                    
+                    // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
+                    // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));
+                    // println!("node.cell_ids_pos_degn: {:?}", &node.cell_ids_pos_degn);     
+                    // println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);      
                                         
-                    println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );                                                                      
+                    // println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );                                                                      
                     explore( & child, results );
                 }
             }

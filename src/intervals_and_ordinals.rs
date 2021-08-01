@@ -137,18 +137,25 @@ impl < FilRaw > Barcode< FilRaw >
     /// Returns a vector `v` such that `v[i] = #{bars of degree i}`
     /// 
     /// The length of `v` is (top_chain_degree + 1), since it's important to be able to 
-    pub fn num_bars_fin_per_dim( &self ) -> SuperVec< usize > { 
-
-        let mut counts          =   Vec::with_capacity( 0 );
-
-        // if there are any bars in the barcode, count them
+    pub fn num_bars_fin_per_dim( &self ) -> Vec< usize > { 
+  
         if let Some( d ) = self.top_bar_degree() {
             let mut counts      =   Vec::with_capacity( d );
             for _ in 0..d+1 { counts.push(0) }
-            for bar in & self.fin { counts[ bar.dim() ] += 1 }        
-        }
+            for bar in & self.fin { counts[ bar.dim() ] += 1 }  
+            return counts      
+        } else {
+            return Vec::with_capacity(0)
+        };
+        
+        // mut counts          =   Vec::with_capacity( 0 );
 
-        SuperVec{ vec: counts, val: 0 }
+        // // if there are any bars in the barcode, count them
+        // if let Some( d ) = self.top_bar_degree() {
+        //     let mut counts      =   Vec::with_capacity( d );
+        //     for _ in 0..d+1 { counts.push(0) }
+        //     for bar in & self.fin { counts[ bar.dim() ] += 1 }        
+        // }
 
     }    
 
@@ -532,7 +539,7 @@ impl Polytope {
         } 
     }
 
-    /// Mainimum ordinal filtration value allowed for this cell.
+    /// Mainimum ordinal filtration value allowed for this cell.  Returns None if cell has not been assigned to a level set.
     pub fn  cell_id_to_fmin( &self, cell_id: usize ) -> Option<Fil> { 
         match self.cell_id_to_lev_set_ord( cell_id ) {
             Some( i )   =>  self.lev_set_ord_to_fmin( i ),
@@ -540,7 +547,7 @@ impl Polytope {
         }
     }
 
-    /// Maximum ordinal filtration value allowed for this cell.
+    /// Maximum ordinal filtration value allowed for this cell.  Returns None if cell has not been assigned to a level set.
     pub fn  cell_id_to_fmax( &self, cell_id: usize ) -> Option<Fil> { 
         match self.cell_id_to_lev_set_ord( cell_id ) {
             Some( i )   =>  self.lev_set_ord_to_fmax( i ),
@@ -559,9 +566,49 @@ impl Polytope {
     }
 
     /// A vector v such that v[ i ] = (the level set ordinal of cell i)
-    pub fn  vec_mapping_cell_id_to_filtration_ordinal( &self ) -> Vec< usize > {
+    pub fn  vec_mapping_cell_id_to_level_set_ordinal( &self ) -> Vec< usize > {
         self.data_c_to_l.clone()
     }
+
+    /// A vector v such that v[ i ] = (the level set ordinal of cell i)
+    pub fn  vec_mapping_cell_id_to_min_filt_ordinal( &self ) -> Vec< usize > {
+        let mut vec         =   Vec::new();
+        for cell_id in 0 .. self.num_cells() {
+            if let Some( ord ) = self.cell_id_to_fmin( cell_id ) { vec.push( ord ) }
+            else { vec.push( self.num_cells() ) }
+        }
+        vec
+    }    
+
+    pub fn  dim( &self ) -> Option< usize > {
+        if let Some( max_filt_ord ) = self.data_l_to_fmin.last() {
+            Some( self.num_lev_sets() - max_filt_ord - 2 )
+        } else {
+            None
+        }
+    }
+
+    /// True or false: if each cell that have been assigned a level set ordinal
+    /// takes the minimum possible value it can take, then are the resulting
+    /// values equal to those of vector provided?  Cells that have not been assigned
+    /// a level set ordinal are ignored.
+    pub fn min_vertex_is_compatible_with_ordinal_filt(
+                & self,
+                ordinal_filtration:  & Vec< Fil >
+            )
+        -> 
+        bool  
+    {
+        for cell_id in 0 .. self.num_cells() {
+            if let Some( a ) = self.cell_id_to_fmin( cell_id )  {
+                if a != ordinal_filtration[ cell_id ] {                                      
+                    return false 
+                }
+            }
+        }
+        return true 
+    }
+
 
 }
 
@@ -693,6 +740,26 @@ mod tests {
         assert_eq!(     &   barcode.ordinal.ord_to_val, 
                         &   vec![0, 1, 2],
         );
+
+    }
+
+    #[test]
+    fn test_is_compatible_with_ordinal_filtration() {
+
+        let polytope                =   Polytope{ 
+                                            data_c_to_l: vec![0, 1, 1],
+                                            data_l_to_fmin: vec![2, 0, 1, 6, 6, 6]
+                                        };
+
+        assert_eq!(     
+            false, 
+            polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 4, 4, 4] )
+        );
+        assert_eq!(     
+            false, 
+            polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![1, 0, 1, 4, 4, 4] )
+        );        
+            
 
     }
 

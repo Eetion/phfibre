@@ -4,3 +4,4 @@ pub mod utilities;
 pub mod intervals_and_ordinals;
 pub mod rank_calculations;
 pub mod facets;
+pub mod simplex;

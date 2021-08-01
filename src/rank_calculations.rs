@@ -200,12 +200,15 @@ pub fn num_degenerate_bars_per_degree< FilRaw >(
 
     // compute dimension of boundary space in each degree
     let mut quota       =   ranks.rank_boundaries_vec();
+
+    println!("quota now: {:?}", &quota );
     
     // subtract number of bars in each degree
-    let mut num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim().vec;    
+    let mut num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim();    
     for deg in 0 .. num_bars_fin_per_dim.len() {
         quota[ deg ] -= num_bars_fin_per_dim[ deg ]
     }
+    println!("quota now: {:?}", &quota );    
 
     quota // this is a super vec
 }
