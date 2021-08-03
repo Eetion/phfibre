@@ -87,30 +87,30 @@ fn main() {
 
     println!("\nRESULTS\n");
 
-    // let mut result_vector_set  = HashSet::new();
-    // let mut result_vector_vec  = Vec::new();    
+    let mut result_vector_set  = HashSet::new();
+    let mut result_vector_vec  = Vec::new();    
     
-    // for (result_count, result) in results.iter().cloned().enumerate() {
-    //     let mut a   =   result.data_c_to_l.clone();
-    //     let     b   =   result.data_l_to_fmin.clone();
-    //     let mut c   =   solar::utilities::index::compose_f_after_g(&b, &a);
-    //     a.append( &mut c );
+    for (result_count, result) in results.iter().cloned().enumerate() {
+        let mut a   =   result.data_c_to_l.clone();
+        let     b   =   result.data_l_to_fmin.clone();
+        let mut c   =   solar::utilities::index::compose_f_after_g(&b, &a);
+        a.append( &mut c );
 
-    //     verify_that_barcode_is_compatible( 
-    //         & root,
-    //         & result
-    //     );        
+        verify_that_barcode_is_compatible( 
+            & root,
+            & result
+        );        
         
-    //     println!("result number {:?}: {:?}", &result_count, &a );
-    //     result_vector_set.insert( a.clone() );
-    //     result_vector_vec.push( a.clone() );        
-    // }     
+        println!("result number {:?}: {:?}", &result_count, &a );
+        result_vector_set.insert( a.clone() );
+        result_vector_vec.push( a.clone() );        
+    }     
     
-    // let mut num_by_dim = vec![0, 0, 0, 0];
-    // for (result_count, result) in results.iter().cloned().enumerate() {
-    //     num_by_dim[ result.dim().unwrap() ] +=1;
-    // }
-    // println!("number of top dimensional cells: {:?}", num_by_dim );
+    let mut num_by_dim = vec![0, 0, 0, 0];
+    for (result_count, result) in results.iter().cloned().enumerate() {
+        num_by_dim[ result.dim().unwrap() ] +=1;
+    }
+    println!("number of top dimensional cells: {:?}", num_by_dim );
 
 
 

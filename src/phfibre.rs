@@ -1,9 +1,10 @@
 
 use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
+use crate::polytopes::polytopes::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
-use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm};
+use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
@@ -229,39 +230,41 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
     let mut first_pass_was_true = false;
 
-    if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+    // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
         
-        println!("-------------------------");
-        println!("polytope: {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
-        println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",    
-                                                    &   node.bars_degn_quota,
-                                                    node.lev_set_sizes.size_last()          ==  Some( 0 ),
-                                                    node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
-                                                    node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
-                                                    node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf(),
-                                                    node.bar_ids_now_inf_brn.is_empty() &&     
-                                                    node.bar_ids_now_fin_brn.is_empty() &&    
-                                                    node.bar_ids_now_fin_die.is_empty(),
-                                                    node.polytope                           // the level set contains no "critical" cell
-                                                        .lev_set_last_is_critical()
-                                                        .unwrap(),                                                    
-                                                    node.polytope.num_lev_sets(),
-                                                    node.cell_ids_out
+    //     println!("-------------------------");
+    //     println!("node polytope:  {:?} {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal(), & node.polytope.data_c_to_l );         
+    //     println!("-------------------------");        
+    //     println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",    
+    //                                                 &   node.bars_degn_quota,
+    //                                                 node.lev_set_sizes.size_last()          ==  Some( 0 ),
+    //                                                 node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
+    //                                                 node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
+    //                                                 node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf(),
+    //                                                 node.bar_ids_now_inf_brn.is_empty() &&     
+    //                                                 node.bar_ids_now_fin_brn.is_empty() &&    
+    //                                                 node.bar_ids_now_fin_die.is_empty(),
+    //                                                 node.polytope                           // the level set contains no "critical" cell
+    //                                                     .lev_set_last_is_critical()
+    //                                                     .unwrap(),                                                    
+    //                                                 node.cell_ids_out
+    //                                                 // & node.bar_ids_dun_fin,
+    //                                                 // & node.barcode.num_bars_fin(),
 
-                                                    // & node.bar_ids_dun_fin,
-                                                    // & node.barcode.num_bars_fin(),
+    //     );
+    //     println!("node.bar_ids_now_fin_die {:?}", &node.bar_ids_now_fin_die);
+    //     println!(" node.cell_ids_pos_crit {:?}", & node.cell_ids_pos_crit);
+       
 
-        );
+    //     println!("quota forbids: {:?}", node.bars_degn_quota.sindex( 0, 0 ) == 0);
 
-        println!("quota forbids: {:?}", node.bars_degn_quota.sindex( 0, 0 ) == 0);
+    //     println!("node.lev_set_sizes.last_level_set_ordinal() {:?}", &node.lev_set_sizes.last_level_set_ordinal());
 
-        println!("node.lev_set_sizes.last_level_set_ordinal() {:?}", &node.lev_set_sizes.last_level_set_ordinal());
-
-        // std::thread::sleep(
-        //     std::time::Duration::from_millis(1000)
-        // ) 
-        first_pass_was_true     =   true;
-    }
+    //     // std::thread::sleep(
+    //     //     std::time::Duration::from_millis(1000)
+    //     // ) 
+    //     first_pass_was_true     =   true;
+    // }
 
 
       
@@ -283,6 +286,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         // we may have alread constructed an equivalent filtration (just with a different order
         // on cells within a level set).  if we haven't then push to results.
         if ! results.contains( & node.polytope ) {
+            println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim().unwrap() ) )   );
             results.push( node.polytope.clone() ); 
         }
 
@@ -373,6 +377,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             
             // println!("CALL 1: INITIALIZED NEW LEV SET");
             explore( & child, results );
+            return
             
         }
 
@@ -545,46 +550,56 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             let bar_new         =   node.barcode
                                         .bar_fin( bar_id );
 
-            // loop over all dimension (dim+1) chains
+            // loop over all dimension (dim+1) chains, skipping empty ones but maintaining a global count of chains checked
+            // (this is why filter has to come last)
             for (neg_id_count, neg_id) in   node.cell_ids_out
                                                 [ bar_new.dim() + 1 ]
                                                 .iter()
                                                 .cloned()
                                                 .enumerate()
+                                                .filter(|(_x_count, x)|  ! node.boundary[ *x ].is_empty() )
             {
 
 
+                // find the lowest entry of the vector, according to birth order
+                let low_entry   =   node.boundary
+                                        [ neg_id ]
+                                        .iter()
+                                        .cloned()
+                                        .max_by(
+                                            |(xind, xcoeff),  (yind, ycoeff)|
+                                            node.cells_all[ *xind ].birth_ordinal.cmp(
+                                                & node.cells_all[ *yind ].birth_ordinal
+                                            )
+                                        )
+                                        .unwrap();  
+                
+                let low_cell_id     =   low_entry.0.clone();
+                let low_birth_ord   =   node.cells_all[ low_cell_id ].birth_ordinal.clone();
+  
+//-------------------------------------------------------------------------------------------------                
+                
+                // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {  
+                    
+                //     println!("!!!!!!!!!! ATTEMPTING TO ADD NEGATIVE CELL PARENT polytope:  {:?} {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal(), & node.polytope.data_c_to_l );                     
+                //     println!("{:?} {:?} {:?} {:?}",  
+                //                                 low_birth_ord < node.cells_all.len(),
+                //                                 node.polytope.cell_id_to_fmin( low_cell_id.clone() ) ==  Some( bar_new.birth() ),
+                //                                 node.cell_ids_pos_crit.contains( & low_cell_id ),
+                //                                 & low_cell_id 
+                //                             )
+                // }                   
 
 
-
-//-------------------------------------------------------------------------------------------------
-                // find the lowest nonzero entry in this column
-                let low_birthord_and_id_opt    =   node.boundary
-                                                    [ neg_id ]  
-                                                    .iter()
-                                                    .map(   |x| 
-                                                            (   
-                                                                node.cells_all[ x.0 ].birth_ordinal.clone(),   
-                                                                x.0.clone())                            
-                                                            )
-                                                    .max();                
-
-                // short-circuit if the column is empty                                                 
-                if low_birthord_and_id_opt == None { continue }
-
-                // unwrap the bottom index
-                let low_birthord_and_id            =   low_birthord_and_id_opt.unwrap();            
-
-
+//-------------------------------------------------------------------------------------------------                                    
                 //   IF  every cell in the support of this column has been assigned a birth ordinal 
                 //  AND  low_id corresponds to a positive degenerate cell
                 // THEN  add a negative degenerate cell
-                if  low_birthord_and_id.0 < node.cells_all.len()  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                if  low_birth_ord < node.cells_all.len()  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
                     &&  
-                    node.polytope.cell_id_to_fmin( low_birthord_and_id.1.clone() ).unwrap() == bar_new.birth()
+                    node.polytope.cell_id_to_fmin( low_cell_id.clone() ).unwrap() == bar_new.birth()
                     &&
-                    node.cell_ids_pos_crit.contains( & low_birthord_and_id.1 )
-//-------------------------------------------------------------------------------------------------                    
+                    node.cell_ids_pos_crit.contains( & low_cell_id )
 
                 {
 
@@ -603,7 +618,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // move cells
                     let _           =   child.cell_ids_out[ bar_new.dim() + 1 ].swap_remove(neg_id_count);       // remove negative cell from "out list"
-                    child.cell_ids_pos_crit.remove( & low_birthord_and_id.1 );                                   // remove positive cell from set of unmatched positive cells
+                    child.cell_ids_pos_crit.remove( & low_cell_id );                                   // remove positive cell from set of unmatched positive cells
 
                     // move bar
                     let _           =   child.bar_ids_now_fin_die.swap_remove(bar_id_count);    // remove bar from "unadded list"
@@ -629,7 +644,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // record the pairing in the central registry
                     child.cells_all
-                        [ low_birthord_and_id.1 ]
+                        [ low_cell_id ]
                         .bounding_cell_id
                                     =   neg_id.clone();
 
@@ -638,7 +653,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // define the ingredients for clearing
                     let clearor     =   child.boundary[ neg_id ].clone();
-                    let pivot_entry =   clearor.last().unwrap();
+                    let pivot_entry =   low_entry.clone();
                     let ring        =   child.ring.clone();
 
                     // deallocate the negative column (it's no longer needed)
@@ -678,10 +693,10 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         //  ADD BIRTH CELL FOR A *DEGENERATE* BAR 
         //  -------------------------------------
 
-        if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
-            println!("WILL TRY TO ADD SOME DEGENERATE CELLS!");
-            println!("NODE WAS COMPATIBLE FROM THE START: {:?}", first_pass_was_true)
-        }          
+        // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+        //     println!("WILL TRY TO ADD SOME DEGENERATE CELLS!");
+        //     println!("NODE WAS COMPATIBLE FROM THE START: {:?}", first_pass_was_true)
+        // }          
 
         // loop over all dimensions
         for dim in 0..node.cell_ids_out.len() {
@@ -704,10 +719,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
                                                     )  
             {   
                 
-
-                if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
-                    println!("polytope BEFORE: {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
-                }                
+             
                 // update: 
                 //  lev_set_sizes 
                 //  cells_all
@@ -743,12 +755,12 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                 // RUN EXPLORE ON CHILD
 
-                if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
-                    println!("child polytope AFTER:  {:?}", & child.polytope.vec_mapping_cell_id_to_min_filt_ordinal() );
-                    println!("node  polytope AFTER:  {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal() ); 
-                    println!("child full polytope:  {:?}", & child.polytope );                                                           
-                    println!("{:?}", child.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ));
-                }                                
+                // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
+                //     println!("PARENT polytope:  {:?} {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal(), & node.polytope.data_c_to_l );                     
+                //     println!("CHILD  polytope:  {:?} {:?}", & child.polytope.vec_mapping_cell_id_to_min_filt_ordinal(),  & child.polytope.data_c_to_l );
+                //     println!("child full polytope:  {:?}", & child.polytope );                                                           
+                //     println!("{:?}", child.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ));
+                // }                                
                 
                 // println!("BOUNDARY:");
                 // for col in child.boundary.iter() {
@@ -769,37 +781,38 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         // loop over all dimensions
         for dim in 1..node.cell_ids_out.len() {
 
-            // loop over chains of given dimension with nonzero boundary
+            // loop over chains of given dimension with nonzero boundary, skipping empty ones but maintaining a global count of chains checked
+            // (this is why filter has to come last)
             for (neg_id_count, neg_id) in   node.cell_ids_out
                                                 [ dim ]
                                                 .iter()
                                                 .cloned()
                                                 .enumerate()
+                                                .filter(|(_x_count, x)|  ! node.boundary[ *x ].is_empty() )                                                
             {
 
-                // find the lowest nonzero entry in this column
-                let low_birthord_and_id_opt =   node.boundary
-                                                    [ neg_id ]  
-                                                    .iter()
-                                                    .map(   |x| 
-                                                            (   
-                                                                node.cells_all[ x.0 ].birth_ordinal.clone(),   
-                                                                x.0.clone())                            
-                                                            )
-                                                    .max();                
 
-                // short-circuit if the column is empty                                                 
-                if low_birthord_and_id_opt == None { continue }
-
-                // unwrap the bottom index
-                let low_birthord_and_id            =   low_birthord_and_id_opt.unwrap();
+                let low_entry   =   node.boundary
+                                        [ neg_id ]
+                                        .iter()
+                                        .cloned()
+                                        .max_by(
+                                            |(xind, xcoeff),  (yind, ycoeff)|
+                                            node.cells_all[ *xind ].birth_ordinal.cmp(
+                                                & node.cells_all[ *yind ].birth_ordinal
+                                            )
+                                        )
+                                        .unwrap();  
+                
+                let low_cell_id     =   low_entry.0.clone();
+                let low_birth_ord   =   node.cells_all[ low_cell_id ].birth_ordinal.clone();            
 
 
                 //   IF  every cell in the support of this column has been assigned a birth ordinal 
                 //  AND  low_id corresponds to a positive degenerate cell
                 // THEN  add a negative degenerate cell
-                if  low_birthord_and_id.0 < node.cells_all.len() &&  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
-                    node.cell_ids_pos_degn.contains( & low_birthord_and_id.1 ) 
+                if  low_birth_ord < node.cells_all.len() &&  // this first condition helps to short circuit / avoid expensive look-ups in the hash set
+                    node.cell_ids_pos_degn.contains( & low_cell_id ) 
                 {
 
                     // update: 
@@ -814,7 +827,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // move cells
                     let _           =   child.cell_ids_out[ dim ].swap_remove( neg_id_count );         // remove negative cell from "out list"
-                    child.cell_ids_pos_degn.remove( & low_birthord_and_id.1 );                     // remove positive cell from set of unmatched positive cells
+                    child.cell_ids_pos_degn.remove( & low_cell_id );                     // remove positive cell from set of unmatched positive cells
 
                     // record the birth ordinal of the added cell in the central registry
                     child
@@ -835,7 +848,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // record the pairing in the central registry
                     child.cells_all
-                        [ low_birthord_and_id.1 ]
+                        [ low_cell_id ]
                         .bounding_cell_id
                                     =   neg_id.clone();
 
@@ -843,7 +856,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
                     // define the ingredients for clearing
                     let clearor     =   child.boundary[ neg_id ].clone();
-                    let pivot_entry =   clearor.last().unwrap();
+                    let pivot_entry =   low_entry.clone();
                     let ring        =   child.ring.clone();
 
                     // deallocate the negative column (it's no longer needed)

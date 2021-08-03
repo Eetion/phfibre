@@ -1,5 +1,5 @@
 use crate::utilities::*;
-use solar::utilities::index::SuperVec;
+use solar::utilities::index::{SuperVec, EndIndex};
 use ordered_float::OrderedFloat;
 use num::rational::Ratio;
 use std::collections::{HashMap};
@@ -394,21 +394,21 @@ impl LevelSetSizes{
     
     /// Size of all level sets combined.
     pub fn num_cells_total( &self ) -> usize {
-        match end_val( & self.pointers ) { Some( val ) => val, None => 0  }
+        match self.pointers.last() { Some( val ) => val.clone(), None => 0  }
     }
     
     /// Add a size value for a new (empty) level set at the end.
     pub fn postpend_empty_set( & mut self ) { 
-        match end_val( & self.pointers ) { 
-            Some( val ) => self.pointers.push( val ) , 
+        match self.pointers.last() { 
+            Some( val ) => self.pointers.push( val.clone() ) , 
             None => self.pointers.push(0)
         }        
     }
 
     /// Add one to the size of the last level set.
     pub fn grow_last_set( & mut self ) {
-        match end_index( & self.pointers ) {
-            Some( i ) => self.pointers[ i ] += 1 ,
+        match self.pointers.last() {
+            Some( &i ) => self.pointers[ i ] += 1 ,
             None => { panic!("There is no set to grow") }
         }
     }
@@ -555,6 +555,23 @@ impl Polytope {
         }
     }    
 
+    /// Counts the number of strictly lower level set ordinals mapping to the same fmin value.
+    pub fn  cell_id_to_critical_height( &self, cell_id: usize ) -> Option< usize > {
+        match self.cell_id_to_lev_set_ord( cell_id ) {
+            Some( i )   =>  { 
+                let mut height = 0; 
+                for k in (0..i).rev() {
+                    match self.data_l_to_fmin[ k ] == self.data_l_to_fmin[ i ] {
+                        true    => { height += 1; }
+                        false   => { break; }
+                    }
+                }
+                Some( height )
+            } 
+            None        =>  None
+        }        
+    }
+
     /// Post-pend a new (empty) level set.
     pub fn  push_new_lev_set( &mut self )   {
         match self.last_of_all_filtration_ordinals() {
@@ -599,23 +616,45 @@ impl Polytope {
         -> 
         bool  
     {
-        // for cell_id in 0 .. self.num_cells() {
-        //     if self.cell_id_to_fmin( cell_id ) == None {continue}
-        //     if self.cell_id_to_fmin( cell_id ) == self.data_l_to_fmin.last().unwrap()            
+        for cell_id in 0 .. self.num_cells() {
 
-        //     if let Some( a ) = self.cell_id_to_fmin( cell_id )  {
-        //         if  a != ordinal_filtration[ cell_id ] 
-        //             &&
-        //             self.
-        //         {                                      
-        //             return false 
-        //         }
-        //     }
-        // }
-        println!("MUST COME BACK AND FIX THIS COMPATIBILITY TEST FUNCTION");
+            if self.cell_id_to_fmin( cell_id ) == None {
+                continue
+            } else if   self.lev_set_last_is_critical() == Some( false )
+                        &&
+                        self.cell_id_to_lev_set_ord( cell_id ) == Some( self.num_lev_sets() -1 )
+                        &&
+                        self.cell_id_to_fmin( cell_id ).unwrap() + 1 == ordinal_filtration[ cell_id ]
+                        {
+                continue
+            } else if let Some( a ) = self.cell_id_to_fmin( cell_id )  {
+                if  a != ordinal_filtration[ cell_id ] 
+                {                                      
+                    return false 
+                }
+            }
+        }
         return true 
     }
 
+    /// Determine whether `self` contains the other polytope.
+    pub fn  contains( &self, other_poly: Polytope ) -> bool {
+        if  self.vec_mapping_cell_id_to_min_filt_ordinal()
+            !=
+            other_poly.vec_mapping_cell_id_to_min_filt_ordinal()
+        { return false }
+        
+        for cell_id_a in 0 .. self.num_cells() {
+            for cell_id_b in 0 .. self.num_cells() {
+                if        self.cell_id_to_lev_set_ord( cell_id_a ) !=       self.cell_id_to_lev_set_ord( cell_id_b )
+                    &&
+                    other_poly.cell_id_to_lev_set_ord( cell_id_a ) == other_poly.cell_id_to_lev_set_ord( cell_id_b )
+                { return false }
+            }
+        }
+
+        return true
+    }
 
 }
 
@@ -691,6 +730,20 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+
+    #[test]
+    fn test_cell_id_to_critical_height() { 
+        let poly                =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1,1,2],
+                                        data_c_to_l:        vec![3,2,1,0,1,2,3],
+                                    };
+        assert_eq!( poly.cell_id_to_critical_height(0), Some(0) );
+        assert_eq!( poly.cell_id_to_critical_height(1), Some(1) );        
+        assert_eq!( poly.cell_id_to_critical_height(2), Some(0) );                
+        assert_eq!( poly.cell_id_to_critical_height(3), Some(0) );                        
+        assert_eq!( poly.cell_id_to_critical_height(10), None );                        
+    }    
+
     #[test]
     fn test_making_barocde_from_raw_parts()
     {
@@ -753,20 +806,29 @@ mod tests {
     #[test]
     fn test_is_compatible_with_ordinal_filtration() {
 
-        println!("-----------------\nmust come pack and fix text\n----------------");
-    //     let polytope                =   Polytope{ 
-    //                                         data_c_to_l: vec![0, 1, 1],
-    //                                         data_l_to_fmin: vec![2, 0, 1, 6, 6, 6]
-    //                                     };
+        let polytope                =   Polytope{ 
+                                            data_c_to_l: vec![2, 0, 1, 6, 6, 6],
+                                            data_l_to_fmin: vec![0, 1, 1],
+                                        };
 
-    //     assert_eq!(     
-    //         false, 
-    //         polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 4, 4, 4] )
-    //     );
-    //     assert_eq!(     
-    //         false, 
-    //         polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![1, 0, 1, 4, 4, 4] )
-    //     );        
+        assert_eq!(     
+            true, 
+            polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 4, 4, 4] )
+        );
+        assert_eq!(     
+            true, 
+            polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![1, 0, 1, 4, 4, 4] )
+        );  
+
+        let polytope                =   Polytope{ 
+                                            data_c_to_l: vec![2, 0, 1, 6, 6, 6],
+                                            data_l_to_fmin: vec![0, 1, 2],
+                                        };
+
+        assert_eq!(     
+            false, 
+            polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![1, 0, 1, 4, 4, 4] )
+        );                
             
 
     }
