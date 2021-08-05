@@ -1,16 +1,19 @@
 
 use solar::utilities::index::{BiMapSequential, histogram};
-use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use crate::polytopes::polytope::Polytope;
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets 
 };   
+use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use ordered_float::OrderedFloat;
-
+use std::fmt::Debug;
+use std::hash::Hash;
 
 type RingEltRational = OrderedFloat<f64>;
 type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
@@ -20,17 +23,23 @@ type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRatio
 
 
 
-pub fn  fibre_facets_from_complex_facets< RingOp, RingElt> (
+pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
             complex_facets:     & Vec< Vec< usize > >,
-            barcode:            & Barcode,
+            barcode:            & Barcode< FilRaw >,
             ring:               & RingOp
         )
+        ->
+        Vec< Polytope >
+        where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
+                RingElt:    Clone + Debug + Ord,
+                FilRaw:     Clone + Debug + Ord + Hash,
 {
 
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
 
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
+    let max_dim             =   complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, max_dim);        
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
@@ -56,7 +65,7 @@ pub fn  fibre_facets_from_complex_facets< RingOp, RingElt> (
                     &   barcode,
                     &   barcode_inverse,
                     &   cell_dims,  
-                        RingOpRational::new(),
+                        ring.clone(),
                         last_must_be_crit,
                 );
 
@@ -67,16 +76,9 @@ pub fn  fibre_facets_from_complex_facets< RingOp, RingElt> (
 
     explore( & root, &mut results );    
 
-    //  RETURN FIBRE FACETS
+    //  RETURN RESULTS
     //  -------------------
 
-    let fibre_facets    =   
-        if let Some( d )    =   results.iter().map();
-
-    Vec::from_iter(
-        results
-            .iter()
-            .filter(|x| x.dim() == 0)
-    )
+    results
 
 }

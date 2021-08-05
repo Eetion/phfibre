@@ -1,14 +1,15 @@
 
-use solar::utilities::index::{BiMapSequential, histogram};
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use phfibre::polytopes::polytope_faces::{polys_faces};
+use solar::utilities::index::{BiMapSequential, histogram};
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets 
 };   
-use num::rational::Ratio;
+use std::iter::FromIterator;
 use ordered_float::OrderedFloat;
 
 
@@ -89,15 +90,25 @@ fn main() {
 
     println!("number of results: {:?}", results.len() ); 
 
-    let hist = histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
-    println!("number of polytopes by dimension: {:?}", &hist );
-
-    // number of results: 1366
-    // number of polytopes by dimension: [1, 31, 210, 492, 472, 160]    
-
-    //  CHECK
-    //  ------    
-
+    let dim_top             =   results.iter().map(|x| x.dim_cellagnostic().unwrap() ).max().unwrap();
+    let mut dim_to_polycount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for dim in 0 .. dim_top + 1 {
+        dim_to_polycount[ dim ]    =   polys_faces( &results, dim ).len();
+    }
+    println!("number of polytopes total: {:?}", dim_to_polycount.iter().sum::<usize>() );
+    println!("number of polytopes by dimension (total): {:?}", dim_to_polycount );
     
+    let mut dim_to_facetcount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for facet in results.iter() {
+        dim_to_facetcount[ facet.dim_cellagnostic().unwrap() ] += 1;
+    }
+    println!("number of facets total: {:?}", dim_to_facetcount.iter().sum::<usize>() );    
+    println!("number of facets by dimension (total): {:?}", dim_to_facetcount );   
+
+    // number of results: 160
+    // number of polytopes total: 2731
+    // number of polytopes by dimension (total): [32, 241, 702, 964, 632, 160]
+    // number of facets total: 160
+    // number of facets by dimension (total): [0, 0, 0, 0, 0, 160] 
 
 }  

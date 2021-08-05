@@ -1,7 +1,8 @@
 
-use solar::utilities::index::{BiMapSequential, compose_f_after_g, inverse_perm};
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use phfibre::polytopes::polytope_faces::{polys_faces};
+use solar::utilities::index::{BiMapSequential, compose_f_after_g, inverse_perm};
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec, 
 }; 
@@ -87,6 +88,8 @@ fn main() {
 
     println!("\nRESULTS\n");
 
+
+
     let mut result_vector_set  = HashSet::new();
     let mut result_vector_vec  = Vec::new();    
     
@@ -101,16 +104,23 @@ fn main() {
             & result
         );        
         
-        println!("result number {:?}: {:?}", &result_count, &a );
+        println!("result number {:?}: {:?}", &result_count, &result );
         result_vector_set.insert( a.clone() );
         result_vector_vec.push( a.clone() );        
     }     
     
-    let mut num_by_dim = vec![0, 0, 0, 0];
-    for (result_count, result) in results.iter().cloned().enumerate() {
-        num_by_dim[ result.dim_cellagnostic().unwrap() ] +=1;
+    let dim_top             =   results.iter().map(|x| x.dim_cellagnostic().unwrap() ).max().unwrap();
+    let mut dim_to_polycount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for dim in 0 .. dim_top + 1 {
+        dim_to_polycount[ dim ]    =   polys_faces( &results, dim ).len();
     }
-    println!("number of top dimensional cells: {:?}", num_by_dim );
+    println!("number of cells by dimension (total): {:?}", dim_to_polycount );
+    
+    let mut dim_to_facetcount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for facet in results.iter() {
+        dim_to_facetcount[ facet.dim_cellagnostic().unwrap() ] += 1;
+    }
+    println!("number of cells by dimension (total): {:?}", dim_to_facetcount );    
 
 
 

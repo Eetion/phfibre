@@ -17,7 +17,7 @@ use ordered_float::OrderedFloat;
 type Cell = usize;
 type Coeff = Ratio< i64 >;
 type Fil = usize;
-type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
+// type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
 // type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
 
@@ -104,7 +104,7 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt>
 
 }
 
-impl < 'a, RingOp, RingElt > Node < 'a, FilRaw, RingOp, RingElt > 
+impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt > 
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
             RingElt:    Clone + Debug + PartialOrd,
             FilRaw:     Ord + Clone + Hash + Debug            
@@ -283,27 +283,31 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         
         {
 
-        // we may have alread constructed an equivalent filtration (just with a different order
+        let mut poly                            =   node.polytope.clone();
+
+        // the last level set is non-critical and empty; switch it to critical.  this empty, newly-made-critical
+        // level set will represent the last, dimension-0 simplex factor of the polytope
+        *poly.data_l_to_fmin.last_mut().unwrap() += 1;
+
+        // we may have already constructed an equivalent filtration (just with a different order
         // on cells within a level set).  if we haven't then push to results.        
         let mut push                            =   true;
-        for result_count in 0 .. results.len() {
+        for result_count in ( 0 .. results.len() ).rev()  {
             // if the current result is a face of a prior one, then don't bother adding to results
-            if results[ result_count ].contains( &node.polytope ) { 
+            if results[ result_count ].contains( & poly ) { 
                 push                            =   false; 
                 break 
             }
-            // if conversely the current polytope contains a prexisting result, then replace the older one with the larger polytope
-            else if node.polytope.contains( &results[ result_count ] ) { 
-                results[ result_count ]         =   node.polytope.clone(); 
-                push                            =   false;
-                break 
+            // if conversely the current polytope contains a prexisting polytope, then remove the smaller
+            else if poly.contains( &results[ result_count ] ) { 
+                results.remove( result_count );
             }
         }
         if push {
             println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) )   );
-            results.push( node.polytope.clone() ); 
+            results.push( poly ); 
         }
-        
+
     }
 
     else {    

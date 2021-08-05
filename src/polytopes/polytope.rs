@@ -333,7 +333,7 @@ impl Polytope {
             if  othr.cell_id_to_fmin( cell_id )   <   self.cell_id_to_fmin( cell_id )
                 ||
                 othr.cell_id_to_fmax( cell_id )   >   self.cell_id_to_fmax( cell_id )
-            { println!("bounds issue"); return false }                
+            { return false }                
         }
         
         for cell_id_a in 0 .. self.num_cells() {
