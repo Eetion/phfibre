@@ -284,12 +284,26 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         {
 
         // we may have alread constructed an equivalent filtration (just with a different order
-        // on cells within a level set).  if we haven't then push to results.
-        if ! results.contains( & node.polytope ) {
+        // on cells within a level set).  if we haven't then push to results.        
+        let mut push                            =   true;
+        for result_count in 0 .. results.len() {
+            // if the current result is a face of a prior one, then don't bother adding to results
+            if results[ result_count ].contains( &node.polytope ) { 
+                push                            =   false; 
+                break 
+            }
+            // if conversely the current polytope contains a prexisting result, then replace the older one with the larger polytope
+            else if node.polytope.contains( &results[ result_count ] ) { 
+                results[ result_count ]         =   node.polytope.clone(); 
+                push                            =   false;
+                break 
+            }
+        }
+        if push {
             println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) )   );
             results.push( node.polytope.clone() ); 
         }
-
+        
     }
 
     else {    

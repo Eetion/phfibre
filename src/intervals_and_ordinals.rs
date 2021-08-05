@@ -407,8 +407,8 @@ impl LevelSetSizes{
 
     /// Add one to the size of the last level set.
     pub fn grow_last_set( & mut self ) {
-        match self.pointers.last() {
-            Some( &i ) => self.pointers[ i ] += 1 ,
+        match self.pointers.end_index() {
+            Some( i ) => self.pointers[ i ] += 1 ,
             None => { panic!("There is no set to grow") }
         }
     }

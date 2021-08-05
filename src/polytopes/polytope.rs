@@ -23,7 +23,7 @@ type Fil = usize;
 
 /// Represents an (ordinal) polytope, or, equivalently, a family of upper/lower
 /// bounds on variable values.
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Polytope {
     pub data_l_to_fmin:       Vec< Fil >,         // function (level set ordinal) -> min possible filtration value
     pub data_c_to_l:          Vec< usize >,       // function (cell id) -> level set ordinal
@@ -259,44 +259,6 @@ impl Polytope {
         return true 
     }
 
-    /// Determine whether `self` contains the other polytope.
-    pub fn  contains( &self, othr: & Polytope ) -> bool {
-
-        let num_cells       =   self.num_cells();
-        
-        // polytopes must have the same number of cells and the same number of fmin values
-        if  num_cells != othr.num_cells() 
-            ||
-            self.num_simplex_factors() != othr.num_simplex_factors()
-        { return false }
-
-        // the bounds for each cell must be respected
-        for cell_id in 0 .. num_cells {
-            if  othr.cell_id_to_fmin( cell_id )   <   self.cell_id_to_fmin( cell_id )
-                ||
-                othr.cell_id_to_fmax( cell_id )   >   self.cell_id_to_fmax( cell_id )
-            { println!("bounds issue"); return false }                
-        }
-        
-        for cell_id_a in 0 .. self.num_cells() {
-            
-            for cell_id_b in 0 .. self.num_cells() {
-                // the preorder induced by mapping to level set ordinals must be respected
-                if  (
-                        self.cell_id_to_lev_set_ord( cell_id_a )    >=  self.cell_id_to_lev_set_ord( cell_id_b )     
-                    )
-                    &&
-                    ! (
-                        othr.cell_id_to_lev_set_ord( cell_id_a )    >=  othr.cell_id_to_lev_set_ord( cell_id_b )
-                    )
-                    
-                { return false }
-            }
-        }
-
-        return true
-    }
-
 
     // TESTED (BUT CHECK THAT TESTS ARE UP TO DATE)
     /// Returns the union of all non-critical level sets with the same fmin value
@@ -353,6 +315,45 @@ impl Polytope {
                 )
         )
     }        
+
+
+    /// Determine whether `self` contains the other polytope.
+    pub fn  contains( &self, othr: & Polytope ) -> bool {
+
+        let num_cells       =   self.num_cells();
+        
+        // polytopes must have the same number of cells and the same number of fmin values
+        if  num_cells != othr.num_cells() 
+            ||
+            self.num_simplex_factors() != othr.num_simplex_factors()
+        { return false }
+
+        // the bounds for each cell must be respected
+        for cell_id in 0 .. num_cells {
+            if  othr.cell_id_to_fmin( cell_id )   <   self.cell_id_to_fmin( cell_id )
+                ||
+                othr.cell_id_to_fmax( cell_id )   >   self.cell_id_to_fmax( cell_id )
+            { println!("bounds issue"); return false }                
+        }
+        
+        for cell_id_a in 0 .. self.num_cells() {
+            
+            for cell_id_b in 0 .. self.num_cells() {
+                // the preorder induced by mapping to level set ordinals must be respected
+                if  (
+                        self.cell_id_to_lev_set_ord( cell_id_a )    >=  self.cell_id_to_lev_set_ord( cell_id_b )     
+                    )
+                    &&
+                    ! (
+                        othr.cell_id_to_lev_set_ord( cell_id_a )    >=  othr.cell_id_to_lev_set_ord( cell_id_b )
+                    )
+                    
+                { return false }
+            }
+        }
+
+        return true
+    }
 
 }
 

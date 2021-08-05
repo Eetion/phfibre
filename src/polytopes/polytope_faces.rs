@@ -7,7 +7,7 @@ use solar::utilities::combinatorics::fixed_sum_sequences;
 use solar::utilities::index::{histogram};
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
-// use std::collections::{HashMap};
+use std::collections::{HashSet};
 // use std::hash::Hash;
 use std::iter::{FromIterator, repeat};
 // use std::cmp::Ord;
@@ -96,81 +96,12 @@ pub fn  vec_mapping_lsord_old_to_lsord_new(
     for val in lsord_old_to_lsord_new.iter_mut() { *val = ordinal_data.ord( &val ).unwrap() }
 
     lsord_old_to_lsord_new
-
-
-
-
-    // lsord_old_to_lsord_new.extend( repeat(0).take( 1 + simplex_dims[0] - verts_to_delete_per_simp[0].len() ) );
-    // let mut merged_last             =   verts_to_delete_per_simp[0].contains( &simplex_dims[0] );
-
-    // for simplex_count in 1 .. simplex_dims.len() {
-    //     let verts_to_delete         =   & verts_to_delete_per_simp[ simplex_count ]; // the vertices to delete from this simplex, which correspond to **gaps** between level sets
-    //     let simplex_dim             =   simplex_dims[ simplex_count ]; // = one less than the number of level sets with this fmin value        
-    //     for vertex_count in 0 .. simplex_dim + 1 {
-    //         let last_new_ord        =   lsord_old_to_lsord_new.last().unwrap().clone();
-    //         match merged_last {
-    //             true    =>  lsord_old_to_lsord_new.push( last_new_ord ),
-    //             false   =>  lsord_old_to_lsord_new.push( last_new_ord + 1 ),
-    //         }
-    //         merged_last             =   verts_to_delete.contains( &vertex_count );
-    //     }
-    // }
-
-    // lsord_old_to_lsord_new
-
-
-    // let mut num_removed             =   0;
-    // let mut global_position         =   0;
-
-    // // run over (# of critical values) = (# of simplices)
-    // for simplex_count in 0 .. simplex_dims.len() {
-    //     let verts_to_delete         =   & verts_to_delete_per_simp[ simplex_count ]; // the vertices to delete from this simplex, which correspond to **gaps** between level sets
-    //     let simplex_dim             =   simplex_dims[ simplex_count ]; // = one less than the number of level sets with this fmin value
-        
-
-    //     let mut merged_last         =   false;
-
-    //     for vertex_count in 0 .. simplex_dim  
-
-
-
-
-
-    //     // remove all the vertices we need to, except the last one, if the last one happens to be the last vetex in the simplex
-    //     for vertex_count in 0 .. simplex_dim  
-    //     {     
-    //         if verts_to_delete.contains( &vertex_count ) { 
-    //             num_removed += 1;
-    //         }
-    //         global_position += 1;
-    //         lsord_old_to_lsord_new.push(
-    //             global_position - num_removed
-    //         );
-    //     }
-    //     // handle last vertex separately; in this case we merge the next level set up into the last of this simplex's level sets,
-    //     // so all cells that used to get an fmin value of x will now get an fmin value of x+1
-    //     global_position += 1;
-    //     lsord_old_to_lsord_new.push(
-    //         global_position - num_removed
-    //     );
-    //     if verts_to_delete.contains( &simplex_dim ) { 
-    //         num_removed += 1;
-    //     }        
-
-
-    //     // if verts_to_delete.contains( &simplex_dims[ simplex_count ] ) { 
-    //     //     lsord_old_to_lsord_new.push(
-    //     //         global_position - num_removed
-    //     //     );            
-    //     //     num_removed += 1;
-    //     // }        
-    // }
-
-    // lsord_old_to_lsord_new
 }
 
 /// Return a face of the underlying polytope, corresponding to deletion of the vertices provided. 
-pub fn  polytope_face(            
+/// 
+/// Assumes that user never attempts to delete every vertex from a simplex.
+pub fn  poly_face(            
             verts_to_delete_per_simp:   &   Vec< Vec< usize > >,
             poly:                       &   Polytope,
         )
@@ -205,8 +136,7 @@ pub fn  polytope_face(
 /// 
 /// Recall that "vertices" for each simplex correspond to *gaps* between consecutive level sets.
 /// 
-/// Assumes that the last level set corresponds to cells with values fixed at 1 (or whatever the
-/// maximum value is).
+/// Assumes you do not attempt to delete the last vertex of the last simplex.
 /// 
 /// We think of polyvv[ k ] as the sequence of level sets with fmin k.
 pub fn  polyvvv_face(
@@ -242,6 +172,59 @@ pub fn  polyvvv_face(
 
     face
 }     
+
+// TESTING SUPPORT FOR THIS FUNCTION COMES FROM <test_poly_to_face_and_face_enumerate> BELOW
+//
+//
+/// Returns all faces of a polytope of given dimension -- NOT NECESSARILY IN SORTED ORDER.
+pub fn  poly_faces( 
+            poly: &Polytope, 
+            face_dim: usize,
+        ) 
+        -> 
+        Vec< Polytope > 
+{
+    if face_dim > poly.dim_cellagnostic().unwrap() { return vec![] } // there are no faces of strictly higher dimension
+
+    let simplex_factor_dims         =   poly.simplex_factor_dims_cellagnostic();
+    let deletion_choices            =   vertex_deletion_choices_for_product_of_combinatorial_simplices(
+                                            & simplex_factor_dims,
+                                            face_dim
+                                        );    
+    Vec::from_iter(
+        deletion_choices
+            .iter()
+            .map(|deletion_choice| poly_face( deletion_choice, poly ))
+    )                                       
+}
+
+
+/// Given a collection of polytopes, enumerate all faces of a given dimension -- IN SORTED ORDER.
+pub fn  polys_faces( 
+            polys: &Vec< Polytope >, 
+            face_dim: usize,
+        ) 
+        -> 
+        Vec< Polytope > 
+{
+    let mut faces                   =   Vec::new();
+    let mut buffer                  =   Vec::new();
+    let mut receiver                =   Vec::new();
+
+    for poly in polys.iter() {
+        receiver                    =   poly_faces( poly, face_dim );
+        receiver.sort();
+        buffer.clear();
+        buffer.extend(
+            faces.iter().cloned().merge( receiver.iter().cloned() ).dedup()
+        );
+        faces.clear();
+        faces.append( &mut buffer );
+    }
+
+    faces 
+                                     
+}
 
 
 
@@ -303,7 +286,7 @@ mod tests {
 
 
     #[test]
-    fn test_poly_to_face_and_face_enumerate() {
+    fn test_poly_face() {
 
         for params 
             in 
@@ -328,6 +311,8 @@ mod tests {
             let polytope_dim                =   poly.dim_cellagnostic().unwrap();
             let simplex_factor_dims         =   poly.simplex_factor_dims_cellagnostic();
 
+            assert!( poly.contains( & poly ) ); // sanity check
+
             for face_dim in 0 .. polytope_dim {
                 
                 let mut face_pool           =   Vec::new();
@@ -337,7 +322,7 @@ mod tests {
                                                     face_dim
                                                 );
                 for deletion_choice in deletion_choices.iter() {
-                    let face_poly           =   polytope_face(
+                    let face_poly           =   poly_face(
                                                     & deletion_choice,
                                                     & poly,
                                                 );
@@ -381,6 +366,46 @@ mod tests {
 
         }
 
+    }
+
+
+    #[test]
+    fn test_polys_faces() {
+
+        //  NOTE: THE TOP LEVEL SET ORDINAL IS EMPTY BY DESIGN
+        let poly_a      =   Polytope{
+                                data_c_to_l:        vec![0,0,0,1,1,1,2,2,3,3],
+                                data_l_to_fmin:     vec![0,0,1,1,2]
+                            };
+        let poly_b      =   Polytope{
+                                data_c_to_l:        vec![0,0,1,1,1,2,3,3,4,4],
+                                data_l_to_fmin:     vec![0,0,0,1,1,2]
+                            };                           
+        let poly_c      =   Polytope{
+                                data_c_to_l:        vec![0,0,0,1,1,1,2,2,2,2],
+                                data_l_to_fmin:     vec![0,1,1,2]
+                            };                                
+        let poly_d      =   Polytope{
+                                data_c_to_l:        vec![0,0,0,0,0,1,1,1,1,1],
+                                data_l_to_fmin:     vec![0,1,2]
+                            };   
+        
+        let polys       =   vec![ poly_a, poly_b, poly_c, poly_d ];
+                            
+        for face_dim in 0 .. 5 {
+            let mut faces_test    =   polys_faces( &polys, face_dim );
+            let mut faces_true    =   HashSet::new();
+            for poly in polys.iter() {
+                faces_true.extend( poly_faces( &poly, face_dim ) )
+            }
+            let mut faces_true : Vec<_>     =   faces_true.iter().cloned().collect();
+            
+            faces_true.sort();
+            faces_test.sort();        
+
+            assert_eq!( &faces_true, &faces_test );
+
+        }                            
     }
 
 
