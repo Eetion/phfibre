@@ -1,7 +1,7 @@
 
 use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
-use crate::polytopes::polytopes::{Polytope};
+use crate::polytopes::polytope::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
 use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram};
@@ -286,7 +286,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
         // we may have alread constructed an equivalent filtration (just with a different order
         // on cells within a level set).  if we haven't then push to results.
         if ! results.contains( & node.polytope ) {
-            println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim().unwrap() ) )   );
+            println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) )   );
             results.push( node.polytope.clone() ); 
         }
 

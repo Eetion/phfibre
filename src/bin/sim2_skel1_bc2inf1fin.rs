@@ -108,7 +108,7 @@ fn main() {
     
     let mut num_by_dim = vec![0, 0, 0, 0];
     for (result_count, result) in results.iter().cloned().enumerate() {
-        num_by_dim[ result.dim().unwrap() ] +=1;
+        num_by_dim[ result.dim_cellagnostic().unwrap() ] +=1;
     }
     println!("number of top dimensional cells: {:?}", num_by_dim );
 
@@ -119,7 +119,7 @@ fn main() {
     //  COLLECT AND SORT ALL VERTICES OF THE FIBRE
     let mut vertices = Vec::new();
     for result in results.iter().cloned() {
-        if result.dim() == Some(0) {
+        if result.dim_cellagnostic() == Some(0) {
             vertices.push( compose_f_after_g( & result.data_l_to_fmin, & result.data_c_to_l )   )
         }
     }    

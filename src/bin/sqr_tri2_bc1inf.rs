@@ -89,7 +89,7 @@ fn main() {
 
     println!("number of results: {:?}", results.len() ); 
 
-    let hist = histogram( results.iter().map(|x| x.dim().unwrap() ) );
+    let hist = histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
     println!("number of polytopes by dimension: {:?}", &hist );
 
     // number of results: 1366
