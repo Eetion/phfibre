@@ -283,7 +283,7 @@ mod tests {
     }  
     
     #[test]
-    fn test_symbol_bc2inf_1fin() {
+    fn test_symbol_bc2inf() {
 
         let complex_facets      =   vec![  vec![0,1], vec![1, 2], vec![0, 2], vec![2, 3] ];
         let barcode             =   Barcode{
@@ -293,7 +293,24 @@ mod tests {
                                     };
 
         deep_permutation_test_comprehensive( &complex_facets, &barcode );              
-    }      
+    }   
+
+    // TEST SEEMS TO PASS BUT IT HAS TO RUN CALCULATIONS FOR 60 DIFFERENT PERMUTATIONS SO I SHORTCIRCUITED IT
+    #[test]
+    fn test_alien_symbol_bc2inf() {
+
+        let complex_facets      =   vec![  vec![0,1], vec![1, 2], vec![0, 2], vec![2, 3], vec![2, 4] ];
+        let barcode             =   Barcode{
+                                        inf: vec![ BarInfinite{dim:0, birth:0}, BarInfinite{dim:1, birth:1}, ],
+                                        fin: vec![ ],
+                                        ordinal: ordinate( & vec![0, 1] ),
+                                    };
+        deep_permutation_test(  &complex_facets, 
+                                &barcode, 
+                                &RingOpRational::new(), 
+                                &Vec::from_iter(  (0..5).permutations(5).take(3)   )
+                            )
+    }       
     
     
 }
