@@ -4,7 +4,7 @@ use crate::polytopes::polytope::{Polytope};
 use crate::intervals_and_ordinals::{ordinate};
 use solar::utilities::combinatorics::fixed_sum_sequences;
 // use crate::utilities::*;
-use solar::utilities::index::{histogram};
+use solar::utilities::index::{histogram, SuperIndex};
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
 use std::collections::{HashSet};
@@ -57,46 +57,236 @@ pub fn  vertex_deletion_choices_for_product_of_combinatorial_simplices(
     // )
 }
 
-/// Vector mapping the ordinal of each "pre-merge" level set to the ordinal of the
-/// corresponding "post-merge" level set (the one into which the original merges).
-pub fn  vec_mapping_lsord_old_to_lsord_new(            
+// Creates a boolean vector with "true" in slot i if we are supposed to merge
+// level set (i-1) into i.  Returns a value of `None` if `verts_to_delete` 
+// contains the last vertex of the last simplex.
+pub fn  verts_to_delete_per_simp_2_merge_down_flag(
             verts_to_delete_per_simp:   & Vec< Vec< usize > >,
             simplex_dims:               & Vec< usize >,
         )
-        -> 
-        Vec< usize >
+        ->
+        Option< Vec< bool > >
 {
-    // This code works by first placing each level set ordinal into an equivalence class.
-    // At first, each equivalence class is functionally "labeled" by the smallest level
-    // set ordinal that it contains.  After tall the classes have been computed, however,
-    // we relabel them.
+
+    if  verts_to_delete_per_simp.last().unwrap().contains(
+            simplex_dims.last().unwrap()
+        )
+     { return None }
+
     let num_lsord_old               =   simplex_dims.iter().sum::<usize>() + simplex_dims.len(); // each dim differs from set cardinality by 1, so we must add simplex_dims.len() to compensate
-    let mut lsord_old_to_lsord_new  =   Vec::with_capacity(num_lsord_old ); // level-set-ordinal-old to level-set-ordinal-new
 
     let mut merge_down_flag         =   Vec::from_iter( repeat(false).take( num_lsord_old ) );
 
     let mut offset                  =   0;
     for (simplex_count, verts_to_delete) in verts_to_delete_per_simp.iter().enumerate() {
+        // we specify vertices to delete for each simplex as a subset of {0, .., n}; however,
+        // we really want to think of the polytopes as a product of form
+        // {0, .., n_0} x {n_0+1,...,n_1} x ...
+        // the "offset" defined below are essentially the n_i's
         offset                      =   simplex_dims.iter().take(simplex_count).sum::<usize>() + simplex_count;
         for vert in verts_to_delete.iter().map(|x| x + offset ) {
             merge_down_flag[ vert + 1 ]   =   true;
         }
-    } 
+    }   
+    Some( merge_down_flag )
+}
 
-    // Calculate the minimal fmin ord with which each ord merges
-    for lsord_old in 0 .. num_lsord_old {
-        let mut min_equiv_ord       =   lsord_old.clone();
-        while merge_down_flag[ min_equiv_ord ] {
-            min_equiv_ord -= 1;
+
+
+/// Given a boolean vector `v`, interpret `v[i] = true` to mean that level sets
+/// `i` and `i - 1` should merge; this function returns a vector X such that 
+/// (level set number k    in the original partition) is a subset of 
+/// (level set number X[k] in the new, merged partition) (this uniquely defines the vector).
+pub fn  merge_down_flag_to_vec_mapping_lsord_old2new(
+            merge_down_flag:    &   Vec< bool >
+        )
+        ->
+        Vec< usize >
+{
+    // Calculate the minimal lev set ord ord with which each lev set merges
+    let mut lsord_old2new  =   Vec::from_iter( 0 .. merge_down_flag.len() );
+    for lev_set_ord in 0 .. merge_down_flag.len() {
+        while   merge_down_flag[  
+                    lsord_old2new[
+                        lev_set_ord
+                    ]
+                ] 
+        {  
+            lsord_old2new[
+                lev_set_ord
+            ]
+            -= 1;
         }
-        lsord_old_to_lsord_new.push( min_equiv_ord );
     }
 
-    let ordinal_data                =   ordinate( &lsord_old_to_lsord_new );
-    for val in lsord_old_to_lsord_new.iter_mut() { *val = ordinal_data.ord( &val ).unwrap() }
+    // If we merged any level sets, then the ordinals of many level sets may have changed
+    let ordinal_data                =   ordinate( &lsord_old2new );
+    for val in lsord_old2new.iter_mut() { *val = ordinal_data.ord( &val ).unwrap() }
 
-    lsord_old_to_lsord_new
+    lsord_old2new    
 }
+
+
+/// Determine whether merging level sets downward as indicated by the merge_down_flag
+/// would result in a valid face of the polytope.
+/// 
+/// Returns false iff at least one of the following conditions holds: (i) all vertices
+/// from a single simplex are removed, (ii) level set 0 is supposed to merge down
+/// (to say that such a merge were legal would permit pathologies where we think we are
+/// reduced the dimension of a simplex but aren't, really)
+pub fn  merge_down_flag_is_valid_for_simplex_factor_dims(
+            merge_down_flag:        & Vec< bool >,
+            simplex_dims:           & Vec< usize >
+        )
+        ->
+        bool
+{
+    // only the empty vetor is appropriate for an empty product
+    if simplex_dims.is_empty() { 
+        if merge_down_flag.is_empty() { return true }
+        else {return false}
+    }
+
+    // can't merge the first level set down
+    if merge_down_flag[0] { return false }
+
+    // check that flag vector has length equal to the number of level sets
+    let num_lev_sets        =   simplex_dims.iter().sum::<usize>() + simplex_dims.len();
+    if merge_down_flag.len() != num_lev_sets {return false }
+    
+    // check all but the last simplex (it is impossible to remove all vertices from the
+    // last simplex by accident)
+    let mut offset          =   1;
+    for simplex_dim
+        in 
+        simplex_dims[ 0 .. simplex_dims.len() - 1 ].iter() 
+    {        
+        if  merge_down_flag[ offset .. offset + simplex_dim + 1 ]
+                .iter()
+                .all(|&x| x )
+        { return false }
+
+        offset  =   offset + simplex_dim + 1
+    }
+
+    return true
+
+}
+
+/// Given a vector of "merge-down" flags, determine the vector mapping 
+/// level set ordinal to fmin after merging is complete.
+/// 
+/// NOTE: This only works correctly if you provide a merge flag that's compatible
+/// with the given simplex dimensions, as determined by the funciton [`merge_down_flag_is_valid_for_simplex_factor_dims`].
+pub fn  merge_down_flag_simplex_dims_to_lsord2fmin(
+            merge_down_flag:        & Vec< bool >,
+            simplex_dims:           & Vec< usize >
+        )
+        ->
+        Vec< usize >
+{
+    let num_merged              =   merge_down_flag.iter().filter(|&&x| x).count();
+    let num_lev_sets_orig       =   simplex_dims.iter().sum::<usize>() + simplex_dims.len();
+
+    let mut lev_set_ord_to_fmin =   Vec::with_capacity( merge_down_flag.len() - num_merged );
+
+    // Suppose the original lev_set_ord_to_fmin and merge_down_flag vectors look like this
+    //      0 0 1 1 1 2
+    //      0 0 1 0 0 1
+    // then the new lev_set_ord_to_fmin vector should look like
+    //      0 * 1 1 * 2
+    // in particular we remove 
+    let mut offset              =   1;
+    for ( simplex_count, simplex_dim ) in simplex_dims.iter().enumerate() {
+        let num_removed         =   ( offset .. offset + simplex_dim + 1 )
+                                        .filter(
+                                            |&x|
+                                            merge_down_flag.sindex( x, false ) // we use sindex to handle the edge case where x indexes into the last element of merge_down_flag
+                                        )
+                                        .count();                             
+
+        lev_set_ord_to_fmin
+            .extend( 
+                repeat( simplex_count )
+                    .take( 1 + simplex_dim -  num_removed ) 
+                );
+
+        offset += simplex_dim + 1
+    }
+
+    lev_set_ord_to_fmin
+}
+
+
+
+
+
+
+/// Suppose that we merge level sets as stipulated by `vertices_to_delete_per_simp`.
+/// This function returns a vector X such that 
+/// (level set number k    in the original partition) is a subset of 
+/// (level set number X[k] in the new, merged partition) (this uniquely defines the vector).
+/// 
+/// Returns a value of `None` if `verts_to_delete` contains the last vertex of the last simplex.
+pub fn  vec_mapping_lsord_old2new(            
+            verts_to_delete_per_simp:   & Vec< Vec< usize > >,
+            simplex_dims:               & Vec< usize >,
+        )
+        -> 
+        Option< Vec< usize > >
+{
+
+    if let Some( merge_down_flag ) =    verts_to_delete_per_simp_2_merge_down_flag(
+                                            verts_to_delete_per_simp,
+                                            simplex_dims,
+                                        )
+    {
+        Some( merge_down_flag_to_vec_mapping_lsord_old2new( & merge_down_flag ) )
+    } else {
+        None
+}
+
+// OLD STUFF -------------------------------
+// // This code works by first placing each level set ordinal into an equivalence class.
+// // The process works in two steps.  In step 1, each equivalence class is functionally 
+// // "labeled" by the smallest level set ordinal that it contains.  After tall the classes 
+// // have been computed, however, we relabel them.
+// let num_lsord_old               =   simplex_dims.iter().sum::<usize>() + simplex_dims.len(); // each dim differs from set cardinality by 1, so we must add simplex_dims.len() to compensate
+
+// let mut merge_down_flag         =   Vec::from_iter( repeat(false).take( num_lsord_old ) );
+
+// // The following code creates a boolean vector with "true" in slot i if we are supposed to merge
+// // level set (i-1) into i.  This essentially builds a directed graph.  The equivalence classes of
+// // level sets correspond to the connected components of the graph.
+// let mut offset                  =   0;
+// for (simplex_count, verts_to_delete) in verts_to_delete_per_simp.iter().enumerate() {
+//     // we specify vertices to delete for each simplex as a subset of {0, .., n}; however,
+//     // we really want to think of the polytopes as a product of form
+//     // {0, .., n_0} x {n_0+1,...,n_1} x ...
+//     // the "offset" defined below are essentially the n_i's
+//     offset                      =   simplex_dims.iter().take(simplex_count).sum::<usize>() + simplex_count;
+//     for vert in verts_to_delete.iter().map(|x| x + offset ) {
+//         merge_down_flag[ vert + 1 ]   =   true;
+//     }
+// } 
+
+// // Calculate the minimal lev set ord ord with which each lev set merges
+// let mut lsord_old2new  =   Vec::with_capacity(num_lsord_old ); // level-set-ordinal-old to level-set-ordinal-new    
+// for lsord_old in 0 .. num_lsord_old {
+//     let mut min_equiv_ord       =   lsord_old.clone();
+//     while merge_down_flag[ min_equiv_ord ] {
+//         min_equiv_ord -= 1;
+//     }
+//     lsord_old2new.push( min_equiv_ord );
+// }
+
+// // If we merged any level sets, then the ordinals of many level sets may have changed
+// let ordinal_data                =   ordinate( &lsord_old2new );
+// for val in lsord_old2new.iter_mut() { *val = ordinal_data.ord( &val ).unwrap() }
+
+// lsord_old2new
+}
+
 
 /// Return a face of the underlying polytope, corresponding to deletion of the vertices provided. 
 /// 
@@ -110,10 +300,11 @@ pub fn  poly_face(
 {
     let mut poly            =   poly.clone();    
     let simplex_dims        =   poly.simplex_factor_dims_cellagnostic();
-    let translator          =   vec_mapping_lsord_old_to_lsord_new(            
+    let translator          =   vec_mapping_lsord_old2new(            
                                     & verts_to_delete_per_simp,
                                     & simplex_dims,
-                                );
+                                )
+                                .unwrap();
     
     // update mapping from cells to level sets                            
     for cell_id in 0 .. poly.num_cells() {
@@ -240,15 +431,16 @@ mod tests {
 
 
     #[test]
-    fn test_vec_mapping_lsord_old_to_lsord_new() {
+    fn test_vec_mapping_lsord_old2new() {
         
         let simplex_dims                =   vec![1, 3, 0];
         let verts_to_delete_per_simp    =   vec![ vec![1], vec![0], vec![] ];
         
-        let translator_test             =   vec_mapping_lsord_old_to_lsord_new(            
+        let translator_test             =   vec_mapping_lsord_old2new(            
                                                 & verts_to_delete_per_simp,
                                                 & simplex_dims
-                                            );
+                                            )
+                                            .unwrap();
         
         let translator_true             =   vec![ 0, 1, 1, 1, 2, 3, 4 ];
 
@@ -406,6 +598,95 @@ mod tests {
             assert_eq!( &faces_true, &faces_test );
 
         }                            
+    }
+
+    #[test]
+    fn  test_merge_down_flag_is_valid_for_simplex_factor_dims() {
+
+        assert!(
+            !
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, true, false, true, false],
+                & vec![0, 2]
+            )
+        );
+        assert!(
+            !
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, true, true, false],
+                & vec![0, 1, 1]
+            )
+        );
+        assert!(
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, true, false, false],
+                & vec![0, 1, 1]
+            )
+        );    
+        assert!(
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, false, true, false],
+                & vec![0, 1, 1]
+            )
+        );  
+        assert!(
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, false, false, true],
+                & vec![0, 1, 1]
+            )
+        );           
+        assert!(
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, true, false],
+                & vec![0, 1, 0]
+            )
+        );  
+        assert!(
+            merge_down_flag_is_valid_for_simplex_factor_dims(
+                & vec![false, false, false, false],
+                & vec![0, 1, 0]
+            )
+        );                                        
+
+    }
+
+    #[test]
+    fn test_merge_down_flag_simplex_dims_to_lsord2fmin() {
+        assert_eq!(
+            vec![0, 1, 2, 2],
+            merge_down_flag_simplex_dims_to_lsord2fmin(
+                & vec![false, false, true, false, false],
+                & vec![0, 1, 1]
+            )
+        );    
+        assert_eq!(
+            vec![0, 1, 2, 2],            
+            merge_down_flag_simplex_dims_to_lsord2fmin(
+                & vec![false, false, false, true, false],
+                & vec![0, 1, 1]
+            )
+        );  
+        assert_eq!(
+            vec![0, 1, 1, 2],            
+            merge_down_flag_simplex_dims_to_lsord2fmin(
+                & vec![false, false, false, false, true],
+                & vec![0, 1, 1]
+            )
+        );            
+        assert_eq!(
+            vec![0, 1, 2],
+            merge_down_flag_simplex_dims_to_lsord2fmin(
+                & vec![false, false, true, false],
+                & vec![0, 1, 0]
+            )
+        );  
+        assert_eq!(
+            vec![0, 1, 1, 2],
+            merge_down_flag_simplex_dims_to_lsord2fmin(
+                & vec![false, false, false, false],
+                & vec![0, 1, 0]
+            )
+        );                 
     }
 
 

@@ -63,7 +63,7 @@ fn main() {
     //  ALLOW FOR DEGENERATE CELLS AFTER THE LAST FINITE BARCODE ENDPOINT
     //  -----------------------------------------------------------------
 
-    let last_must_be_crit   =   false;
+    // let last_must_be_crit   =   false;
 
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
@@ -75,7 +75,7 @@ fn main() {
                     &   barcode_inverse,
                     &   cell_dims,  
                         RingOpRational::new(),
-                        last_must_be_crit,
+                        // last_must_be_crit,
                 );
 
     let mut results         =   Vec::new();                                

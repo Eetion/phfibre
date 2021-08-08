@@ -2,18 +2,17 @@
 use solar::utilities::index::BiMapSequential;
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use phfibre::polytopes::polytope_faces::{polys_faces};
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
-    ordered_subsimplices_up_thru_dim_concatenated_vec 
-}; 
+    ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
-    boundary_matrix_from_complex_facets 
-};   
+    boundary_matrix_from_complex_facets     }; 
 use num::rational::Ratio;
-use ordered_float::OrderedFloat;
+use std::iter::FromIterator;
 
 
-type RingEltRational = OrderedFloat<f64>;
-type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
+type RingEltRational = Ratio<i64>;
+type RingOpRational = solar::rings::ring_native::NativeDivisionRing<Ratio<i64>>;
 
 
 
@@ -26,7 +25,7 @@ fn main() {
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
 
-    let complex_facets      =   vec![  vec![0,1] ];
+    let complex_facets      =   vec![  vec![0,1,2] ];
 
     let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
@@ -34,15 +33,12 @@ fn main() {
     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
     let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
 
-    println!("{:?}", & cell_dims);
-    println!("{:?}", & boundary);    
-
 
     //  DEFINE THE BARCODE + INVERSE BARCODE
     //  ------------------------------------
 
-    let barcode_inf_dim     =   vec![0];    
-    let barcode_inf_brn     =   to_ordered_float( & vec![0.] );
+    let barcode_inf_dim     =   vec![0, 1];    
+    let barcode_inf_brn     =   vec![0, 1];
 
     let barcode_fin_dim     =   Vec::new();    
     let barcode_fin_brn     =   Vec::new();
@@ -58,12 +54,12 @@ fn main() {
                                 );   
     
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
-            
+
 
     //  ALLOW FOR DEGENERATE CELLS AFTER THE LAST FINITE BARCODE ENDPOINT
     //  -----------------------------------------------------------------
-
-    let last_must_be_crit   =   false;
+    
+    // let last_must_be_crit   =   false;    
 
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
@@ -75,7 +71,7 @@ fn main() {
                     &   barcode_inverse,
                     &   cell_dims,  
                         RingOpRational::new(),
-                        last_must_be_crit,
+                        // last_must_be_crit,
                 );
 
     let mut results         =   Vec::new();                                
@@ -83,24 +79,45 @@ fn main() {
     //  GATHER RESULTS
     //  --------------
 
-    // println!("{:?}", &root );
-
     explore( & root, &mut results );
 
-    println!("\nRESULTS\n");
-
-    
-    for result in results.iter().cloned().enumerate() {
-        println!("{:?}", result)
-    }    
+    //  DOUBLE CHECK RESULTS
+    //  --------------------
 
     for (result_count, result) in results.iter().cloned().enumerate() {
-        println!("result number {:?}", result_count);
         verify_that_barcode_is_compatible( 
             & root,
             & result
         );
+    }    
+
+    //  DISPLAY RESULTS
+    //  --------------------    
+
+    println!("\nRESULTS\n");
+
+    println!("number of facets: {:?}", results.len() ); 
+
+    let dim_top             =   results.iter().map(|x| x.dim_cellagnostic().unwrap() ).max().unwrap();
+    let mut dim_to_polycount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for dim in 0 .. dim_top + 1 {
+        dim_to_polycount[ dim ]    =   polys_faces( &results, dim ).len();
     }
+    println!("number of polytopes total: {:?}", dim_to_polycount.iter().sum::<usize>() );
+    println!("number of polytopes by dimension (total): {:?}", dim_to_polycount );
+
+    let mut dim_to_facetcount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
+    for facet in results.iter() {
+        dim_to_facetcount[ facet.dim_cellagnostic().unwrap() ] += 1;
+    }
+    println!("number of facets total: {:?}", dim_to_facetcount.iter().sum::<usize>() );    
+    println!("number of facets by dimension (total): {:?}", dim_to_facetcount );           
 
 
 }  
+
+// number of results: 12
+// number of polytopes total: 42
+// number of polytopes by dimension (total): [9, 21, 12]
+// number of facets total: 12
+// number of facets by dimension (total): [0, 0, 12]

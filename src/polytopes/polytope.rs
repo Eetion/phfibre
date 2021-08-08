@@ -7,6 +7,7 @@
 // use std::collections::{HashMap};
 // use std::hash::Hash;
 use std::iter::{FromIterator, repeat};
+use itertools::Itertools;
 // use std::cmp::Ord;
 // use std::iter;
 
@@ -425,6 +426,42 @@ pub fn  polyvvv_to_poly( polyvvv: & Vec< Vec< Vec< usize >>>  )
     
 }
 
+//  ---------------------------------------------------------------------------  
+//  ENUMERATE ALL POLYTOPES OF GIVEN PARAMS
+//  --------------------------------------------------------------------------- 
+
+
+/// Enumerate all polytopes P such that (i) P has 2 or 3 simplex factors, the last
+/// of which is a 0 simplex corresponding to an empty level set (this comports
+/// with the output of the main phfibre algorithm), (ii) each simplex has 
+/// dimension in {0, 1, 2}, (iii) each level set (except for the last, which is
+/// empty) contains exactly one vertex.  For each `data_l_to_fmin`,
+/// we generate a polytope for each permutation of `poly.num_cells = poly.fmin_max`.
+/// 
+/// This produces 40 polytopes total.
+pub fn  enumerate_poly_test_set_40_total() -> Vec< Polytope > {
+
+    let mut polytopes   =   Vec::new();
+    for num_fmin_vals in 2..4{
+        for num_lev_sets_per_fmin in ( 0 .. num_fmin_vals - 1 ).map(|x| 1 .. 3 ).multi_cartesian_product() {
+            let mut data_l_to_fmin = Vec::new();
+            for (fmin, num_lev_sets) in num_lev_sets_per_fmin.iter().enumerate() { 
+                data_l_to_fmin.extend( repeat(fmin).take( * num_lev_sets ) );
+            }
+            data_l_to_fmin.push( num_fmin_vals - 1 ); // the last fmin val; we give this val a single (empty, critical) level set
+            let num_cells   =  data_l_to_fmin.len() - 1; 
+            for perm in ( 0 .. num_cells ).permutations(num_cells) {
+                polytopes.push(
+                    Polytope{
+                        data_c_to_l:        perm,
+                        data_l_to_fmin:     data_l_to_fmin.clone()
+                    }
+                )
+            }
+        }
+    }
+    return polytopes
+}
 
 //  ---------------------------------------------------------------------------  
 //  GENERATE RANDOM POLYTOPE
@@ -630,6 +667,12 @@ mod tests {
             ]
         )
            
-    }      
+    }    
+    
+    #[test]
+    fn test_enumerate_poly_test_set_40_total() {
+        let polys               =   enumerate_poly_test_set_40_total();
+        for poly in polys.iter().enumerate() { println!("{:?}", poly)}  
+    }
 
 }    

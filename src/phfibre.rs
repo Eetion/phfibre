@@ -1,13 +1,17 @@
 
 use crate::utilities::*;
-use crate::intervals_and_ordinals::*;
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode, ordinate};
 use crate::polytopes::polytope::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
-use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram};
+use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram, BiMapSequential};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
+use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+    ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
+use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+    boundary_matrix_from_complex_facets     }; 
 use num::rational::Ratio;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashSet};
 use std::hash::Hash;
 use std::iter::FromIterator;
 use std;
@@ -100,7 +104,7 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt>
     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
 
-    last_must_be_crit:      bool,                           // a flag to indicate whether the last level set must be critical
+    // last_must_be_crit:      bool,                           // a flag to indicate whether the last level set must be critical
 
 }
 
@@ -109,14 +113,14 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
             RingElt:    Clone + Debug + PartialOrd,
             FilRaw:     Ord + Clone + Hash + Debug            
 {
-
+    /// Generate a root node from boundary data
     pub fn make_root(   
         boundary:               Vec< Vec< (Cell, RingElt)>>,
         barcode:            &'a Barcode< FilRaw >,
         barcode_inverse:    &'a BarcodeInverse,        
         cell_dims:          &   Vec< usize >,   
         ring:                   RingOp,  
-        last_must_be_crit:      bool,        
+        // last_must_be_crit:      bool,        
     ) 
     -> 
     Node< 'a, FilRaw, RingOp, RingElt >    
@@ -210,11 +214,55 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
             bar_ids_now_inf_brn:    bar_ids_now_inf_brn,
             bar_ids_now_fin_brn:    bar_ids_now_fin_brn,
             bar_ids_now_fin_die:    bar_ids_now_fin_die,
-            last_must_be_crit:      last_must_be_crit,
+            // last_must_be_crit:      last_must_be_crit,
         }     
     }
 
+
+
 }
+
+//  ---------------------------------------------------------------------------  
+//  SEED DATA
+//  ---------------------------------------------------------------------------  
+
+// pub struct SeedOfNode< FilRaw, RingOp, RingElt > 
+//     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+//             RingElt:    Clone + Debug + PartialOrd,
+//             FilRaw:     Ord + Clone + Hash + Debug  
+// {
+//     boundary:           Vec< Vec< (Cell, RingElt) > >,
+//     cell_dims:          Vec< usize >
+    
+// }    
+
+
+    // pub fn seed_from_base_space_facets(   
+    //     complex_facets:         Vec< Vec< usize > >,
+    //     barcode:            &'a Barcode< FilRaw >,
+    //     ring:                   RingOp,   
+    // )      
+    // -> 
+    // Node< 'a, FilRaw, RingOp, RingElt >      
+    
+    // {
+    //     let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
+    //     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
+    
+    //     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
+    //     let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
+
+    //     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );        
+
+    //     Node::make_root(
+    //             boundary.clone(),
+    //         &   barcode,
+    //         &   barcode_inverse,
+    //         &   cell_dims,  
+    //             ring.clone(),
+    //             // last_must_be_crit,
+    //     )        
+    // }
 
 
 //  ---------------------------------------------------------------------------  
@@ -274,12 +322,12 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
     if  node.lev_set_sizes.size_last()          ==  Some( 0 ) &&
         node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len() &&
         node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin() &&
-        node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf() &&
-        (            
-            node.polytope.lev_set_last_is_critical() == Some( true )
-            ||
-            ! node.last_must_be_crit
-        )           
+        node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf() //&&
+        // (            
+        //     node.polytope.lev_set_last_is_critical() == Some( true )
+        //     ||
+        //     ! node.last_must_be_crit
+        // )           
         
         {
 
@@ -917,10 +965,12 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 //  ---------------------------------------------------------------------------  
 
 
-pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt >( 
+pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt >( 
             root_node:  &   Node< FilRaw, RingOp, RingElt >, 
             result:     &   Polytope
         )
+        ->
+        bool
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
             RingElt:    Clone + Debug + PartialOrd + Ord,
             FilRaw:     Clone + Debug + Ord + Hash        
@@ -989,8 +1039,92 @@ pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt >(
     barcode_true.inf.sort();
     barcode_true.fin.sort();
 
-    assert_eq!( &barcode_proposed.inf, &barcode_true.inf );
-    assert_eq!( &barcode_proposed.fin, &barcode_true.fin );    
-    assert_eq!( &barcode_proposed.ordinal.ord_to_val, &barcode_true.ordinal.ord_to_val );        
+    return  &barcode_proposed.inf   ==  &barcode_true.inf
+            &&
+            &barcode_proposed.fin   ==  &barcode_true.fin
+            &&
+            &barcode_proposed.ordinal.ord_to_val    ==  &barcode_true.ordinal.ord_to_val
 
-}            
+    // assert_eq!( &barcode_proposed.inf, &barcode_true.inf );
+    // assert_eq!( &barcode_proposed.fin, &barcode_true.fin );    
+    // assert_eq!( &barcode_proposed.ordinal.ord_to_val, &barcode_true.ordinal.ord_to_val );        
+
+}   
+
+
+pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt >( 
+            root_node:  &   Node< FilRaw, RingOp, RingElt >, 
+            result:     &   Polytope
+        )
+    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:    Clone + Debug + PartialOrd + Ord,
+            FilRaw:     Clone + Debug + Ord + Hash  
+
+{
+    assert!( is_barcode_compatible( root_node, result ) );
+}
+
+
+
+
+
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+
+    #[test]
+    fn test_verify_that_barcode_is_compatible() {
+
+        type RingEltFixed       =   OrderedFloat<f64>;
+        type RingOpFixed        =   solar::rings::ring_native::NativeDivisionRing<RingEltFixed>;
+        let ring                =   RingOpFixed::new();
+
+        let complex_facets      =   vec![ vec![0, 1], vec![1, 2], vec![0, 2] ];
+        
+        let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
+        let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
+    
+        let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
+        let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
+        
+        let barcode             =   Barcode{
+                                        inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:3} ],
+                                        fin: vec![ BarFinite{dim:0,birth:1,death:2} ],
+                                        ordinal: ordinate( & vec![0,1,2,3] )
+                                    };
+        
+        let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );                                    
+
+        let root_node           =  Node::make_root(
+                                            boundary.clone(),
+                                        &   barcode,
+                                        &   barcode_inverse,
+                                        &   cell_dims,  
+                                            ring.clone()
+                                            // last_must_be_crit,
+                                    );
+
+        let poly_correct_a      =   Polytope{
+                                        data_c_to_l:    vec![ 0, 0, 1, 0, 2, 3],
+                                        data_l_to_fmin: vec![ 0, 1, 2, 3, 4]
+                                    };
+
+        let poly_correct_b      =   Polytope{
+                                        data_c_to_l:    vec![ 0, 0, 1, 0, 3, 2],
+                                        data_l_to_fmin: vec![ 0, 1, 2, 3, 4]
+                                    };  
+        let poly_incorrect      =   Polytope{
+                                        data_c_to_l:    vec![ 0, 0, 1, 3, 2, 0],
+                                        data_l_to_fmin: vec![ 0, 1, 2, 3, 4]
+                                    };                                      
+                                    
+        assert!(        is_barcode_compatible( &root_node, &poly_correct_a    ) );
+        assert!(        is_barcode_compatible( &root_node, &poly_correct_b    ) );        
+        assert!(    !   is_barcode_compatible( &root_node, &poly_incorrect    ) );              
+    }  
+    
+  
+}

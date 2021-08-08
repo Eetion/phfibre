@@ -66,7 +66,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
                     &   barcode_inverse,
                     &   cell_dims,  
                         ring.clone(),
-                        last_must_be_crit,
+                        // last_must_be_crit,
                 );
 
     let mut results         =   Vec::new();                                

@@ -13,8 +13,8 @@ use std::iter::FromIterator;
 use ordered_float::OrderedFloat;
 
 
-type RingEltRational = OrderedFloat<f64>;
-type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
+type RingEltFixed = OrderedFloat<f64>;
+type RingOpFixed = solar::rings::ring_native::NativeDivisionRing<RingEltFixed>;
 
 
 
@@ -22,7 +22,7 @@ fn main() {
 
     //  DEFINE COEFFICIENT FIELD
     //  --------------------------------------------
-    let ring                =   RingOpRational::new();
+    let ring                =   RingOpFixed::new();
 
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
@@ -61,7 +61,7 @@ fn main() {
     //  ALLOW FOR DEGENERATE CELLS AFTER THE LAST FINITE BARCODE ENDPOINT
     //  -----------------------------------------------------------------
 
-    let last_must_be_crit   =   false;
+    // let last_must_be_crit   =   false;
 
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
@@ -72,8 +72,8 @@ fn main() {
                     &   barcode,
                     &   barcode_inverse,
                     &   cell_dims,  
-                        RingOpRational::new(),
-                        last_must_be_crit,
+                        RingOpFixed::new(),
+                        // last_must_be_crit,
                 );
 
     let mut results         =   Vec::new();                                
@@ -105,7 +105,7 @@ fn main() {
     println!("number of facets total: {:?}", dim_to_facetcount.iter().sum::<usize>() );    
     println!("number of facets by dimension (total): {:?}", dim_to_facetcount );   
 
-    // number of results: 160
+    // number of facets: 160
     // number of polytopes total: 2731
     // number of polytopes by dimension (total): [32, 241, 702, 964, 632, 160]
     // number of facets total: 160
