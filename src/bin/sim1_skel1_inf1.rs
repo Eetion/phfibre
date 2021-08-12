@@ -1,18 +1,24 @@
 
-use solar::utilities::index::BiMapSequential;
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::polytopes::polytope_faces::{polys_faces};
+use phfibre::polytopes::polytope_faces::{polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytopes::polytope_intersection::{polytope_intersection};
+use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::rank_calculations::chain_cx_rank_nullity;
+use solar::utilities::index::{BiMapSequential, histogram};
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
-        ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
+    ordered_subsimplices_up_thru_dim_concatenated_vec 
+}; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
-        boundary_matrix_from_complex_facets     }; 
-use num::rational::Ratio;
+    boundary_matrix_from_complex_facets 
+};   
+use solar::rings::field_prime::GF2;
 use std::iter::FromIterator;
+use ordered_float::OrderedFloat;
 
+type RingEltRational = OrderedFloat<f64>;
+type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
 
-type RingEltRational = Ratio<i64>;
-type RingOpRational = solar::rings::ring_native::NativeDivisionRing<Ratio<i64>>;
 
 
 
@@ -77,53 +83,74 @@ fn main() {
                         // last_must_be_crit,
                 );
 
-    let mut results         =   Vec::new();                                
+    let mut poly_complex_facets         =   Vec::new();                                
 
-    //  GATHER RESULTS
+   //  GATHER RESULTS
     //  --------------
 
-    explore( & root, &mut results );
+    // println!("{:?}", &root );
 
-    //  DOUBLE CHECK RESULTS
-    //  --------------------
+    explore( & root, &mut poly_complex_facets );
 
-    for (result_count, result) in results.iter().cloned().enumerate() {
-        verify_that_barcode_is_compatible( 
-            & root,
-            & result
-        );
-    }    
+    //  REPORT
+    //  ------
 
-    //  DISPLAY RESULTS
-    //  --------------------    
+    println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
+    println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
 
-    println!("\nRESULTS\n");
+    let poly_complex_ordinal_data   =   poly_complex_facets_to_whole_complex_ordinal_data( & poly_complex_facets );
+    let poly_complex_dims           =   Vec::from_iter( poly_complex_ordinal_data.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
+    let poly_complex_dim_top        =   poly_complex_dims.iter().max().unwrap();    
+    println!("number of polytopes (total): {:?}", poly_complex_ordinal_data.ord_to_val.len() ); 
+    println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
-    println!("number of facets: {:?}", results.len() ); 
+    let num_facets              =   poly_complex_facets.len();
+    let mut dismat              =   Vec::from_iter(
+                                        std::iter::repeat(
+                                            Vec::from_iter(
+                                                std::iter::repeat( OrderedFloat(1.) )
+                                                .take( num_facets)                                                
+                                            )
+                                        )
+                                        .take(num_facets)
+                                    );
+    for facet_id in 0 .. num_facets{ dismat[facet_id][facet_id] = OrderedFloat(0.) }
 
-    let dim_top             =   results.iter().map(|x| x.dim_cellagnostic().unwrap() ).max().unwrap();
-    let mut dim_to_polycount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
-    for dim in 0 .. dim_top + 1 {
-        dim_to_polycount[ dim ]    =   polys_faces( &results, dim ).len();
+    let mut intersection_dim_bins  =   Vec::from_iter( std::iter::repeat(0).take( poly_complex_dim_top + 1) );
+
+    for count_a in 0 .. num_facets{
+        for count_b in count_a + 1 .. num_facets {
+            if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
+                dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
+                dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
+                let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
+                intersection_dim_bins[ dim ] += 1              
+            }
+        }
     }
-    println!("number of polytopes total: {:?}", dim_to_polycount.iter().sum::<usize>() );
-    println!("number of polytopes by dimension (total): {:?}", dim_to_polycount );
 
-    let mut dim_to_facetcount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
-    for facet in results.iter() {
-        dim_to_facetcount[ facet.dim_cellagnostic().unwrap() ] += 1;
-    }
-    println!("number of facets total: {:?}", dim_to_facetcount.iter().sum::<usize>() );    
-    println!("number of facets by dimension (total): {:?}", dim_to_facetcount );           
+    println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );
 
+    println!("here");
+    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_ordinal_data );
+    println!("there");    
+    let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
+                                                    & poly_complex_differential,
+                                                    & poly_complex_dims,
+                                                    GF2{}
+                                                );
+    println!("everywhere");                                                    
+    let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
+    println!("betti numbers: {:?}", &poly_complex_betti_vec)
 
 
 }  
 
 // RESULTS
 // 
-// number of results: 2
-// number of polytopes total: 5
-// number of polytopes by dimension (total): [3, 2]
-// number of facets total: 2
-// number of facets by dimension (total): [0, 2]
+// number of facets (total): 2
+// number of facets (binned by dimension): [0, 2]
+// number of polytopes (total): 5
+// number of polytopes (binned by dimension): [3, 2]
+// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [1, 0]
+// betti numbers: [1, 0]

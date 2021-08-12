@@ -1,6 +1,6 @@
 
 use crate::utilities::*;
-use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode, ordinate};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode, ordinate_unique_vals};
 use crate::polytopes::polytope::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
@@ -131,9 +131,9 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
 
         // compute degenrate bar quotas
         let ranks                   =   chain_cx_rank_nullity(
-                                            boundary.clone(), 
-                                            ring.clone(),
-                                            & cell_dims
+                                            & boundary, 
+                                            & cell_dims,
+                                            ring.clone(),                                            
                                         );
         let bars_degn_quota         =   num_degenerate_bars_per_degree(
                                             & ranks,
@@ -1093,7 +1093,7 @@ mod tests {
         let barcode             =   Barcode{
                                         inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:3} ],
                                         fin: vec![ BarFinite{dim:0,birth:1,death:2} ],
-                                        ordinal: ordinate( & vec![0,1,2,3] )
+                                        ordinal: ordinate_unique_vals( & vec![0,1,2,3] )
                                     };
         
         let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );                                    

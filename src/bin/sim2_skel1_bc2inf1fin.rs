@@ -1,23 +1,23 @@
 
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::polytopes::polytope_faces::{polys_faces};
-use solar::utilities::index::{BiMapSequential, compose_f_after_g, inverse_perm};
+use phfibre::polytopes::polytope_faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytopes::polytope_intersection::{polytope_intersection};
+use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::rank_calculations::chain_cx_rank_nullity;
+use solar::utilities::index::{BiMapSequential, histogram};
 use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
-    ordered_subsimplices_up_thru_dim_concatenated_vec, 
+    ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
-    boundary_matrix_from_complex_facets     }; 
-use solar::cell_complexes::simplices_unweighted::simplex::{    
-    simplex_perm_o2n_from_vertex_perm_o2n   }; 
-use num::rational::Ratio;
-use ordered_float::OrderedFloat;
-use std::collections::HashSet;
+    boundary_matrix_from_complex_facets 
+};   
+use solar::rings::field_prime::GF2;
 use std::iter::FromIterator;
+use ordered_float::OrderedFloat;
 
 type RingEltRational = OrderedFloat<f64>;
 type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
-
 
 
 fn main() { 
@@ -78,92 +78,66 @@ fn main() {
                         // last_must_be_crit,
                 );
 
-    let mut results         =   Vec::new();                                
+    let mut poly_complex_facets     =   Vec::new();                                
 
-    //  GATHER RESULTS
+   //  GATHER RESULTS
     //  --------------
 
+    // println!("{:?}", &root );
 
-    explore( & root, &mut results );
+    explore( & root, &mut poly_complex_facets );
 
-    println!("\nRESULTS\n");
+    //  REPORT
+    //  ------
 
+    println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
+    println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
 
+    let poly_complex_ordinal_data   =   poly_complex_facets_to_whole_complex_ordinal_data( & poly_complex_facets );
+    let poly_complex_dims           =   Vec::from_iter( poly_complex_ordinal_data.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
+    let poly_complex_dim_top        =   poly_complex_dims.iter().max().unwrap();    
+    println!("number of polytopes (total): {:?}", poly_complex_ordinal_data.ord_to_val.len() ); 
+    println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
-    let mut result_vector_set  = HashSet::new();
-    let mut result_vector_vec  = Vec::new();    
-    
-    for (result_count, result) in results.iter().cloned().enumerate() {
-        let mut a   =   result.data_c_to_l.clone();
-        let     b   =   result.data_l_to_fmin.clone();
-        let mut c   =   solar::utilities::index::compose_f_after_g(&b, &a);
-        a.append( &mut c );
+    let num_facets              =   poly_complex_facets.len();
+    let mut dismat              =   Vec::from_iter(
+                                        std::iter::repeat(
+                                            Vec::from_iter(
+                                                std::iter::repeat( OrderedFloat(1.) )
+                                                .take( num_facets)                                                
+                                            )
+                                        )
+                                        .take(num_facets)
+                                    );
+    for facet_id in 0 .. num_facets{ dismat[facet_id][facet_id] = OrderedFloat(0.) }
 
-        verify_that_barcode_is_compatible( 
-            & root,
-            & result
-        );        
-        
-        println!("result number {:?}: {:?}", &result_count, &result );
-        result_vector_set.insert( a.clone() );
-        result_vector_vec.push( a.clone() );        
-    }     
-    
-    let dim_top             =   results.iter().map(|x| x.dim_cellagnostic().unwrap() ).max().unwrap();
-    let mut dim_to_polycount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
-    for dim in 0 .. dim_top + 1 {
-        dim_to_polycount[ dim ]    =   polys_faces( &results, dim ).len();
-    }
-    println!("number of cells by dimension (total): {:?}", dim_to_polycount );
-    
-    let mut dim_to_facetcount   =   Vec::from_iter( std::iter::repeat(0).take(dim_top + 1) );
-    for facet in results.iter() {
-        dim_to_facetcount[ facet.dim_cellagnostic().unwrap() ] += 1;
-    }
-    println!("number of cells by dimension (total): {:?}", dim_to_facetcount );    
+    let mut intersection_dim_bins  =   Vec::from_iter( std::iter::repeat(0).take( poly_complex_dim_top + 1) );
 
-
-
-    //-------------------------------------------------------------
-
-    //  COLLECT AND SORT ALL VERTICES OF THE FIBRE
-    let mut vertices = Vec::new();
-    for result in results.iter().cloned() {
-        if result.dim_cellagnostic() == Some(0) {
-            vertices.push( compose_f_after_g( & result.data_l_to_fmin, & result.data_c_to_l )   )
+    for count_a in 0 .. num_facets{
+        for count_b in count_a + 1 .. num_facets {
+            if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
+                dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
+                dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
+                let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
+                intersection_dim_bins[ dim ] += 1              
+            }
         }
-    }    
-    vertices.sort();
-
-    for vertex in vertices.iter() { println!("vertex: {:?}", &vertex ) }
-
-    
-    //  DEFINE A PERMUTAITON ON SIMPLICES INDUCED BY A PERMUTATION ON VERTICES
-    let perm_v_o2n      =   vec![2, 0, 1];
-    let perm_s_o2n      =   simplex_perm_o2n_from_vertex_perm_o2n( &simplex_sequence, &perm_v_o2n );
-    let perm_s_n2o      =   inverse_perm( & perm_s_o2n );
-
-    //  OBTAIN A SEQUENCE OF FIBRE VERTICES CORRESPONDING TO THE PERMUTATION
-    //  THIS WORKS B/C THE PERMUTATION DETERMINES AN ISOMORPHISM ON THE UNDERLYING SIMPLICIAL COMPLEX
-
-    let mut vertices_under_group_action     =   vertices.clone();
-
-    for i in 0 .. vertices_under_group_action.len() {
-        vertices_under_group_action[ i ] = compose_f_after_g( &vertices_under_group_action[ i ], & perm_s_n2o);
     }
 
-    //  COMPARE VERTEX SETS
+    println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );
 
-    let hset_old    =   HashSet::<std::vec::Vec<usize>>::from_iter( vertices.iter().cloned() );
-    let hset_new    =   HashSet::<std::vec::Vec<usize>>::from_iter( vertices_under_group_action );
+    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_ordinal_data );
+    // for (col_count, col) in poly_complex_differential.iter().enumerate() {
+    //     println!("{:?} {:?}", col_count, col );
+    // }
+   
+    let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
+                                                    & poly_complex_differential,
+                                                    & poly_complex_dims,
+                                                    GF2{}
+                                                );                                                  
+    let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
+    println!("betti numbers: {:?}", &poly_complex_betti_vec)
 
-
-
-    println!("OLD - NEW: {:?}", & hset_old.difference( & hset_new ) );
-    println!("NEW - OLD: {:?}", & hset_new.difference( & hset_old ) );    
-
-    // -----------------------------------------------------------------------------------------------------------
-    //
-    // NEW - OLD: [[2, 0, 1, 2, 2, 3], [2, 1, 0, 2, 2, 3]]
 
 }  

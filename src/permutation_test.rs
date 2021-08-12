@@ -1,6 +1,6 @@
 
 use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarInfinite, BarFinite, to_ordered_float, ordinate};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarInfinite, BarFinite, to_ordered_float};
 use crate::polytopes::polytope_faces::{polys_faces};
 use crate::polytopes::polytope::Polytope;
 use crate::facet_pipeline::fibre_facets_from_complex_facets;

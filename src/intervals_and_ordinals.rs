@@ -54,8 +54,11 @@ impl    < T >
 }
 
 
-/// Get the ordinal data for the range of values taken by a vector of ordered floats
-pub fn ordinate < FilRaw > ( v: & Vec< FilRaw > ) -> OrdinalData< FilRaw > 
+/// Given a vector of elements of a poset, first sort the vector and delete 
+/// duplicate entries; the resulting vector represents a bijection from 
+/// {0, .., n} to the set of unique values in the vector.  Store this new vector
+/// in an OrdinalData struct together with a hashmap representing the inverse bijection
+pub fn ordinate_unique_vals < FilRaw > ( v: & Vec< FilRaw > ) -> OrdinalData< FilRaw > 
     where FilRaw: Ord + Hash + Clone
 {
     let mut a       =   v.clone();
@@ -68,6 +71,22 @@ pub fn ordinate < FilRaw > ( v: & Vec< FilRaw > ) -> OrdinalData< FilRaw >
     }
 
     OrdinalData { ord_to_val: a, val_to_ord: b }
+}
+
+
+pub fn  reverse_hash< T: Hash + std::cmp::Eq + Clone >( 
+            vec: & Vec< T >
+        ) 
+        -> 
+        HashMap< T, usize >
+{
+    let mut rev_hash    =   HashMap::new();
+
+    for (i, t) in vec.iter().enumerate() {
+        rev_hash.insert( t.clone(), i.clone() );
+    }
+
+    rev_hash
 }
 
 
@@ -191,7 +210,7 @@ impl < FilRaw > Barcode< FilRaw >
         endpoints_raw_unordered.append( &mut fin_die.clone() );
 
         // extract ordinal data about the set of endpoints
-        let raw_endpoint_ordinal_data   =   ordinate( &endpoints_raw_unordered );
+        let raw_endpoint_ordinal_data   =   ordinate_unique_vals( &endpoints_raw_unordered );
 
         // initialize barcode object
         let mut barcode     =   Barcode {
@@ -312,7 +331,7 @@ Barcode< FilRaw >
 where FilRaw: Ord + Clone + Hash
 {
 
-    let ordinal         =   ordinate( &births );
+    let ordinal             =   ordinate_unique_vals( &births );
 
     let num_cells           =   dims.len();
     let mut num_bars_fin    =   0;

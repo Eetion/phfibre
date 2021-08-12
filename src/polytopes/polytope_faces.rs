@@ -1,7 +1,7 @@
 
 
 use crate::polytopes::polytope::{Polytope};
-use crate::intervals_and_ordinals::{ordinate};
+use crate::intervals_and_ordinals::{ordinate_unique_vals, OrdinalData, reverse_hash};
 use solar::utilities::combinatorics::fixed_sum_sequences;
 // use crate::utilities::*;
 use solar::utilities::index::{histogram, SuperIndex};
@@ -25,6 +25,10 @@ struct SimprodFaceEnumerator{
 
 }
 
+/// Given a sequence of simplices s_1, .., s_n with dimensions d_1, .., d_n,
+/// return a vecttor consisting of all sequences (X_1, .., X_n) such that
+/// (s_1 - X_1) x ... x (s_n - X_n) is a dimension-`face_dim` face of 
+/// s_1 x ... x s_n.
 pub fn  vertex_deletion_choices_for_product_of_combinatorial_simplices(
             dims:       &   Vec< usize >,
             face_dim:       usize
@@ -120,7 +124,7 @@ pub fn  merge_down_flag_to_vec_mapping_lsord_old2new(
     }
 
     // If we merged any level sets, then the ordinals of many level sets may have changed
-    let ordinal_data                =   ordinate( &lsord_old2new );
+    let ordinal_data                =   ordinate_unique_vals( &lsord_old2new );
     for val in lsord_old2new.iter_mut() { *val = ordinal_data.ord( &val ).unwrap() }
 
     lsord_old2new    
@@ -389,6 +393,26 @@ pub fn  poly_faces(
     )                                       
 }
 
+pub fn  poly_faces_by_codim(
+            poly: &Polytope, 
+            codim_face: usize,
+        ) 
+        -> 
+        Vec< Polytope >     
+{
+    let dim_poly                    =   poly.dim_cellagnostic().unwrap();
+    if codim_face > dim_poly {
+        Vec::with_capacity(0)
+    } 
+    else {
+        poly_faces( 
+            poly,
+            dim_poly - codim_face,
+        ) 
+    }
+}
+
+
 
 /// Given a collection of polytopes, enumerate all faces of a given dimension -- IN SORTED ORDER.
 pub fn  polys_faces( 
@@ -415,6 +439,44 @@ pub fn  polys_faces(
 
     faces 
                                      
+}
+
+
+/// Given the facets of a polyhedral complex, (i) enumerate all polyherdra, 
+/// (ii) order these polyhedra in ascending order, first by dimension and
+/// second by the order derived by Rust on polyhedra, (iii) encode this ordering
+/// in an OrdinalData struct.
+pub fn  poly_complex_facets_to_whole_complex_ordinal_data(
+            complex_facets: & Vec< Polytope >,       
+        )
+        ->
+        OrdinalData< Polytope >
+{
+    let dim_top                 =   complex_facets
+                                        .iter()
+                                        .map(
+                                                |x| 
+                                                x.dim_cellagnostic().unwrap() 
+                                        )
+                                        .max()
+                                        .unwrap();
+    
+
+    // Collect all faces into a vector                                    
+    let mut all_faces           =   Vec::new();
+    for poly_dim in 0 .. dim_top + 1 {
+        let mut pure_dim_faces  =   polys_faces(
+                                        &   complex_facets,
+                                            poly_dim,
+                                    );
+        pure_dim_faces.sort();
+        all_faces.append( &mut pure_dim_faces );
+    }
+
+    let rev_hash                =   reverse_hash( & all_faces );
+
+    // build ordinal data
+    OrdinalData{ ord_to_val: all_faces, val_to_ord: rev_hash }
 }
 
 

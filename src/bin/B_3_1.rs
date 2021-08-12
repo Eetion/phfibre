@@ -1,6 +1,6 @@
 
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+use phfibre::intervals_and_ordinals::{ordinate_unique_vals, Barcode, BarcodeInverse, BarFinite, BarInfinite};
 use phfibre::polytopes::polytope_faces::{poly_complex_facets_to_whole_complex_ordinal_data};
 use phfibre::polytopes::polytope_intersection::{polytope_intersection};
 use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
@@ -34,31 +34,18 @@ fn main() {
     let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
-    let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
-    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
-
-    println!("{:?}", & cell_dims);
-    println!("{:?}", & boundary);    
+    let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
+    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone()); 
 
 
     //  DEFINE THE BARCODE + INVERSE BARCODE
     //  ------------------------------------
 
-    let barcode_inf_dim     =   vec![0, 1];    
-    let barcode_inf_brn     =   to_ordered_float( & vec![0., 0.5] );
-
-    let barcode_fin_dim     =   Vec::new();    
-    let barcode_fin_brn     =   Vec::new();
-    let barcode_fin_die     =   Vec::new();
-
-
-    let barcode             =   Barcode::new(
-                                    barcode_inf_dim,
-                                    barcode_inf_brn,
-                                    barcode_fin_dim,
-                                    barcode_fin_brn,
-                                    barcode_fin_die
-                                );   
+    let barcode             =   Barcode{
+                                    inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:2} ],
+                                    fin: vec![ BarFinite{dim:0,birth:0,death:1}],
+                                    ordinal: ordinate_unique_vals( & vec![0, 1, 2] ),
+                                };
     
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
             
@@ -81,9 +68,9 @@ fn main() {
                         // last_must_be_crit,
                 );
 
-    let mut poly_complex_facets         =   Vec::new();                                
+    let mut poly_complex_facets     =   Vec::new();                                
 
-   //  GATHER RESULTS
+    //  GATHER RESULTS
     //  --------------
 
     // println!("{:?}", &root );
@@ -143,12 +130,11 @@ fn main() {
     println!("betti numbers: {:?}", &poly_complex_betti_vec)
 
 
-
 }  
 
-// number of facets (total): 12
-// number of facets (binned by dimension): [0, 0, 12]
-// number of polytopes (total): 42
-// number of polytopes (binned by dimension): [9, 21, 12]
-// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [24, 15, 0]
-// betti numbers: [1, 1, 0]
+// number of facets (total): 18
+// number of facets (binned by dimension): [0, 18]
+// number of polytopes (total): 36
+// number of polytopes (binned by dimension): [18, 18]
+// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [18, 0]
+// betti numbers: [1, 1]

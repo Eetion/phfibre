@@ -1,5 +1,5 @@
 use solar::utilities::index::{SuperIndex};
-use crate::intervals_and_ordinals::{ordinate, Barcode, BarFinite, BarInfinite};
+use crate::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use num::rational::Ratio;
 use std::iter::FromIterator;
 use std::iter;
@@ -97,9 +97,9 @@ impl ChainComplexRankNullity {
 
 
 pub fn  chain_cx_rank_nullity< RingOp, RingElt >( 
-            boundary:       Vec< Vec< (Cell, RingElt) > >,
-            ring:           RingOp,
-            cell_degs:      & Vec< usize >
+            boundary:       & Vec< Vec< (Cell, RingElt) > >,
+            cell_degs:      & Vec< usize >,
+            ring:           RingOp,            
         ) 
         -> 
         ChainComplexRankNullity 
@@ -242,9 +242,9 @@ mod tests {
         
         //  compute ranks        
         let ranks               =   chain_cx_rank_nullity(
-                                        boundary.clone(), 
-                                        ring.clone(), 
-                                        & dims
+                                        & boundary, 
+                                        & dims,
+                                        ring.clone(),                                         
                                     );
 
         //  verify
