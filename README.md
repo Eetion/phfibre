@@ -1,9 +1,5 @@
 
 
+# Important note
 
-
-
-
-# To-d0
-
-* try exporting to Poly-make
+For the most recent code, see the git branch `dev_greg`.

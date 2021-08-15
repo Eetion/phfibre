@@ -1,0 +1,138 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'phfibre'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "phfibre",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'phfibre'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=phfibre",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "phfibre",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'phfibre'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=phfibre",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "phfibre",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'simplex2_skel1_bc2essential'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=simplex2_skel1_bc2essential",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "simplex2_skel1_bc2essential",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'simplex2_skel1_bc2essential'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=simplex2_skel1_bc2essential",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "simplex2_skel1_bc2essential",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'simplex2_skel1_bcTrivial'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=simplex2_skel1_bcTrivial",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "simplex2_skel1_bcTrivial",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'simplex2_skel1_bcTrivial'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=simplex2_skel1_bcTrivial",
+                    "--package=phfibre"
+                ],
+                "filter": {
+                    "name": "simplex2_skel1_bcTrivial",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
