@@ -1,10 +1,10 @@
 
 # How to install
 
-* install Rust
-* clone three git repos: the current one, `SOLAR`, and `ExHACT`
-* this repo contains a file called `Cargo.toml`.  in your cloned copy, update the file paths for `SOLAR` and `ExHACT` so that Rust will know where to look in your computer for this code
-* to run a calculation, you will typically write a program file, save it to the `bin` folder, and then run it via the following command (it is **very important** to include the `--release` at the end; if you exclude it the program will run in debug mode, which is much slower):
+* Install Rust
+* Clone three git repos: the current one, `SOLAR`, and `ExHACT`
+* This repo contains a file called `Cargo.toml`.  In your cloned copy, update the file paths for `SOLAR` and `ExHACT` so that Rust will know where to look in your computer for this code
+* To run a calculation, you will typically write a program file, save it to the `bin` folder, and then run it via the following command (it is **very important** to include the `--release` at the end; if you exclude it the program will run in debug mode, which is much slower):
 
 ```
 cd path/to/this/repo
