@@ -1,7 +1,7 @@
 
 
 // use crate::utilities::*;
-// use solar::utilities::index::{SuperVec, EndIndex};
+// use solar::utilities::indexing_and_bijection::{SuperVec, EndIndex};
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
 // use std::collections::{HashMap};

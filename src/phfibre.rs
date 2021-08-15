@@ -1,12 +1,14 @@
 
 use crate::utilities::*;
-use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode, ordinate_unique_vals};
-use crate::polytopes::polytope::{Polytope};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode};
+use crate::polytope::object_def::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
-use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram, BiMapSequential};
+use solar::utilities::indexing_and_bijection::{SuperVec, SuperIndex, sort_perm, inverse_perm};
+use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
+use solar::utilities::statistics::histogram;
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets     }; 

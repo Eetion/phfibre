@@ -1,5 +1,6 @@
 use crate::utilities::*;
-use solar::utilities::index::{SuperVec, EndIndex};
+use solar::utilities::indexing_and_bijection::{EndIndex};
+use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
 use ordered_float::OrderedFloat;
 use num::rational::Ratio;
 use std::collections::{HashMap};
@@ -23,71 +24,6 @@ type Fil = usize;
 
 // Produces a vector of ordered floats from a vector of floats
 pub fn to_ordered_float( v: & Vec< f64 > ) -> Vec< OrderedFloat< f64> > { v.iter().map(|x| OrderedFloat(x.clone()) ).collect() }
-
-
-
-
-//  ---------------------------------------------------------------------------
-//  PRIMITIVE ORDINALS
-//  ---------------------------------------------------------------------------
-
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct OrdinalData < T : Ord + Eq + PartialOrd + PartialEq + Hash > {
-    pub ord_to_val:  Vec< T >,
-    pub val_to_ord:  HashMap< T, usize >
-}
-
-impl    < T >
-        OrdinalData
-        < T >
-        where T : Ord + Eq + PartialOrd + PartialEq + Hash + Clone
-{
-    /// The ordinal of the raw filtration value
-    pub fn ord( &self, a: &T ) -> Option< usize > { 
-        self.val_to_ord.get( a ).map(|x| x.clone()) 
-    }
-    /// The raw filtration value of the ordinal
-    pub fn val( &self, a: usize ) -> Option< T > { 
-        if a < self.ord_to_val.len() { Some( self.ord_to_val[ a ].clone() ) } else { None }
-    }    
-}
-
-
-/// Given a vector of elements of a poset, first sort the vector and delete 
-/// duplicate entries; the resulting vector represents a bijection from 
-/// {0, .., n} to the set of unique values in the vector.  Store this new vector
-/// in an OrdinalData struct together with a hashmap representing the inverse bijection
-pub fn ordinate_unique_vals < FilRaw > ( v: & Vec< FilRaw > ) -> OrdinalData< FilRaw > 
-    where FilRaw: Ord + Hash + Clone
-{
-    let mut a       =   v.clone();
-    let mut b       =   HashMap::new();
-    a.sort();       // sort entries
-    a.dedup();      // remove duplicates
-
-    for (i, t) in a.iter().enumerate() {
-        b.insert( t.clone(), i.clone() );
-    }
-
-    OrdinalData { ord_to_val: a, val_to_ord: b }
-}
-
-
-pub fn  reverse_hash< T: Hash + std::cmp::Eq + Clone >( 
-            vec: & Vec< T >
-        ) 
-        -> 
-        HashMap< T, usize >
-{
-    let mut rev_hash    =   HashMap::new();
-
-    for (i, t) in vec.iter().enumerate() {
-        rev_hash.insert( t.clone(), i.clone() );
-    }
-
-    rev_hash
-}
 
 
 
@@ -127,7 +63,7 @@ pub struct Barcode< FilRaw >
 {
     pub inf:            Vec< BarInfinite >,     // infinite bars (birth ordinals)
     pub fin:            Vec< BarFinite >,       // finite bars (birth/death ordinals)
-    pub ordinal:        OrdinalData< FilRaw >,  // struct converting endpoints to ordinals and vice versa
+    pub ordinal:        BiMapSequential< FilRaw >,  // struct converting endpoints to ordinals and vice versa
 }
 
 
@@ -468,7 +404,7 @@ mod tests {
         let barcode_true    =   Barcode{ 
                                     inf: vec![ BarInfinite{ dim: 0, birth: 0} ],
                                     fin: vec![],
-                                    ordinal: OrdinalData{ 
+                                    ordinal: BiMapSequential{ 
                                                 ord_to_val: vec![OrderedFloat(0.0)],
                                                 val_to_ord: val_to_ord    
                                             }

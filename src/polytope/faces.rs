@@ -1,18 +1,17 @@
 
 
-use crate::polytopes::polytope::{Polytope};
-use crate::intervals_and_ordinals::{ordinate_unique_vals, OrdinalData, reverse_hash};
+use crate::polytope::object_def::{Polytope};
+use solar::utilities::sequences_and_ordinals::{ordinate_unique_vals, BiMapSequential, reverse_hash_sequential};
 use solar::utilities::combinatorics::fixed_sum_sequences;
 // use crate::utilities::*;
-use solar::utilities::index::{histogram, SuperIndex};
+use solar::utilities::indexing_and_bijection::SuperIndex;
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
-use std::collections::{HashSet};
 // use std::hash::Hash;
 use std::iter::{FromIterator, repeat};
 // use std::cmp::Ord;
 use itertools::Itertools;
-// use itertools::structs::{MultiProduct, Combinations};
+// use itertools::object_defs::{MultiProduct, Combinations};
 
 type Fil = usize;
 
@@ -445,12 +444,12 @@ pub fn  polys_faces(
 /// Given the facets of a polyhedral complex, (i) enumerate all polyherdra, 
 /// (ii) order these polyhedra in ascending order, first by dimension and
 /// second by the order derived by Rust on polyhedra, (iii) encode this ordering
-/// in an OrdinalData struct.
+/// in an BiMapSequential struct.
 pub fn  poly_complex_facets_to_whole_complex_ordinal_data(
             complex_facets: & Vec< Polytope >,       
         )
         ->
-        OrdinalData< Polytope >
+        BiMapSequential< Polytope >
 {
     let dim_top                 =   complex_facets
                                         .iter()
@@ -473,10 +472,10 @@ pub fn  poly_complex_facets_to_whole_complex_ordinal_data(
         all_faces.append( &mut pure_dim_faces );
     }
 
-    let rev_hash                =   reverse_hash( & all_faces );
+    let rev_hash                =   reverse_hash_sequential( & all_faces );
 
     // build ordinal data
-    OrdinalData{ ord_to_val: all_faces, val_to_ord: rev_hash }
+    BiMapSequential{ ord_to_val: all_faces, val_to_ord: rev_hash }
 }
 
 
@@ -489,8 +488,8 @@ pub fn  poly_complex_facets_to_whole_complex_ordinal_data(
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::polytopes::polytope::{random_polytope, poly_to_polyvvv, polyvvv_to_poly};
-
+    use crate::polytope::object_def::{random_polytope, poly_to_polyvvv, polyvvv_to_poly};
+    use std::collections::HashSet;
 
     #[test]
     fn test_vec_mapping_lsord_old2new() {

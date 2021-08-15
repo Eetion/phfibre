@@ -1,12 +1,13 @@
 
 use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarInfinite, BarFinite, to_ordered_float};
-use crate::polytopes::polytope_faces::{polys_faces};
-use crate::polytopes::polytope::Polytope;
+use crate::polytope::faces::{polys_faces};
+use crate::polytope::object_def::Polytope;
 use crate::facet_pipeline::fibre_facets_from_complex_facets;
 use crate::utilities::simplices_with_relabeled_vertices;
-use solar::utilities::index::{BiMapSequential, compose_f_after_g, inverse_perm};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use solar::utilities::indexing_and_bijection::{compose_f_after_g, inverse_perm};
+use solar::utilities::sequences_and_ordinals::BiMapSequential;
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec, 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    

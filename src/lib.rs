@@ -3,7 +3,7 @@ pub mod phfibre;
 pub mod utilities;
 pub mod intervals_and_ordinals;
 pub mod rank_calculations;
-pub mod polytopes;
+pub mod polytope;
 pub mod permutation_test;
 pub mod facet_pipeline;
 // pub mod cross_check;

@@ -1,12 +1,12 @@
-
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::polytopes::polytope_faces::{poly_complex_facets_to_whole_complex_ordinal_data};
-use phfibre::polytopes::polytope_intersection::{polytope_intersection};
-use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
+use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytope::intersection::{polytope_intersection};
+use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
 use phfibre::rank_calculations::chain_cx_rank_nullity;
-use solar::utilities::index::{BiMapSequential, histogram};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
+use solar::utilities::statistics::histogram;
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
@@ -15,6 +15,7 @@ use solar::cell_complexes::simplices_unweighted::boundary_matrices::{
 use solar::rings::field_prime::GF2;
 use std::iter::FromIterator;
 use ordered_float::OrderedFloat;
+use phfibre::intervals_and_ordinals::{to_ordered_float};
 
 type RingEltRational = OrderedFloat<f64>;
 type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
@@ -80,7 +81,7 @@ fn main() {
 
     let mut poly_complex_facets     =   Vec::new();                                
 
-   //  GATHER RESULTS
+    //  GATHER RESULTS
     //  --------------
 
     // println!("{:?}", &root );
@@ -141,3 +142,10 @@ fn main() {
 
 
 }  
+
+// number of facets (total): 48
+// number of facets (binned by dimension): [0, 48]
+// number of polytopes (total): 96
+// number of polytopes (binned by dimension): [48, 48]
+// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [48, 0]
+// betti numbers: [2, 2]

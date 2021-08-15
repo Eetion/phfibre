@@ -1,16 +1,15 @@
 
-use solar::utilities::index::{BiMapSequential, histogram};
-use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use crate::polytopes::polytope::Polytope;
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use solar::utilities::sequences_and_ordinals::BiMapSequential;
+use crate::phfibre::{Node, explore};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse};
+use crate::polytope::object_def::Polytope;
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets 
 };   
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
-use num::rational::Ratio;
 use ordered_float::OrderedFloat;
 use std::fmt::Debug;
 use std::hash::Hash;

@@ -1,20 +1,20 @@
 
-use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::polytopes::polytope_faces::{polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
-use phfibre::polytopes::polytope_intersection::{polytope_intersection};
-use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
-use phfibre::rank_calculations::chain_cx_rank_nullity;
-use solar::utilities::index::{BiMapSequential, histogram};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
-    ordered_subsimplices_up_thru_dim_concatenated_vec 
-}; 
-use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
-    boundary_matrix_from_complex_facets 
-};   
-use solar::rings::field_prime::GF2;
-use std::iter::FromIterator;
-use ordered_float::OrderedFloat;
+// use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
+// use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
+// use phfibre::polytope::faces::{polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
+// use phfibre::polytope::intersection::{polytope_intersection};
+// use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
+// use phfibre::rank_calculations::chain_cx_rank_nullity;
+// use solar::utilities::indexing_and_bijection::{BiMapSequential, histogram};
+// use solar::cell_complexes::simplices_unweighted::facets::{    
+//     ordered_subsimplices_up_thru_dim_concatenated_vec 
+// }; 
+// use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+//     boundary_matrix_from_complex_facets 
+// };   
+// use solar::rings::field_prime::GF2;
+// use std::iter::FromIterator;
+// use ordered_float::OrderedFloat;
 use num::rational::Ratio;
 
 
@@ -23,6 +23,27 @@ use exhact::cubical::{Cube, CubicalComplex};
 use exhact::chx::{ChainComplex, factor_chain_complex, ChxTransformKind};
 use exhact::clique::Simplex;
 
+use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
+use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
+use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytope::intersection::{polytope_intersection};
+use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::rank_calculations::chain_cx_rank_nullity;
+use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
+use solar::utilities::statistics::histogram;
+use solar::cell_complexes::simplices_unweighted::facets::{    
+    ordered_subsimplices_up_thru_dim_concatenated_vec 
+}; 
+use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+    boundary_matrix_from_complex_facets 
+};   
+use solar::rings::field_prime::GF2;
+use std::iter::FromIterator;
+use ordered_float::OrderedFloat;
+use phfibre::intervals_and_ordinals::{to_ordered_float};
+
+type RingEltRational = OrderedFloat<f64>;
+type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
 
 
 
@@ -222,10 +243,8 @@ fn main() {
 }  
 
 
-// number of facets (total): 160
-// number of facets (binned by dimension): [0, 0, 0, 0, 0, 160]
-// number of polytopes (total): 2731
-// number of polytopes (binned by dimension): [32, 241, 702, 964, 632, 160]
-// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [5472, 3872, 2120, 928, 328, 0]
-// number of cliques per dimension: [160, 12720, 669920, 26294360]
-// betti numbers: [1, 0, 0, 0, 0, 0]
+// number of facets: 1920
+// number of polytopes total: 39566
+// number of polytopes by dimension (total): [64, 858, 4480, 10860, 13320, 8064, 1920]
+// number of facets total: 1920
+// number of facets by dimension (total): [0, 0, 0, 0, 0, 0, 1920]

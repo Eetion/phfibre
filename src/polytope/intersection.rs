@@ -1,12 +1,12 @@
 
-use crate::polytopes::polytope::Polytope;
-use crate::polytopes::polytope_faces::{ poly_faces, 
+use crate::polytope::object_def::Polytope;
+use crate::polytope::faces::{ poly_faces, 
                                         merge_down_flag_to_vec_mapping_lsord_old2new,
                                         merge_down_flag_is_valid_for_simplex_factor_dims,
                                         merge_down_flag_simplex_dims_to_lsord2fmin,
                                     };
 // use crate::utilities::*;
-use solar::utilities::index::compose_f_after_g;
+use solar::utilities::indexing_and_bijection::compose_f_after_g;
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
 // use std::collections::{HashMap};
@@ -397,7 +397,7 @@ pub fn  polytope_intersection(
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
-    use crate::polytopes::polytope::{enumerate_poly_test_set_40_total};
+    use crate::polytope::object_def::{enumerate_poly_test_set_40_total};
     use itertools::Itertools;
     use std::collections::{HashSet};
     use std::iter::FromIterator;

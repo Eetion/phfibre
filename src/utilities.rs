@@ -1,7 +1,7 @@
 
 
 use std::iter::FromIterator;
-use solar::utilities::index::compose_f_after_g;
+use solar::utilities::indexing_and_bijection::compose_f_after_g;
 
 
 /// Relabels the vertices of each simplex according to the provided bijection, then sorts

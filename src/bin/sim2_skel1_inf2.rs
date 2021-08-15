@@ -1,9 +1,9 @@
 
-use solar::utilities::index::BiMapSequential;
+use solar::utilities::sequences_and_ordinals::BiMapSequential;
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, to_ordered_float};
-use phfibre::polytopes::polytope_faces::{polys_faces};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use phfibre::polytope::faces::{polys_faces};
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec     }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets     }; 

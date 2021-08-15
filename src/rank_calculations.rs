@@ -1,4 +1,4 @@
-use solar::utilities::index::{SuperIndex};
+use solar::utilities::indexing_and_bijection::{SuperIndex};
 use crate::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use num::rational::Ratio;
 use std::iter::FromIterator;

@@ -1,12 +1,13 @@
 
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use phfibre::intervals_and_ordinals::{ordinate_unique_vals, Barcode, BarcodeInverse, BarFinite, BarInfinite};
-use phfibre::polytopes::polytope_faces::{poly_complex_facets_to_whole_complex_ordinal_data};
-use phfibre::polytopes::polytope_intersection::{polytope_intersection};
-use phfibre::polytopes::polytope_differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
+use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytope::intersection::{polytope_intersection};
+use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
 use phfibre::rank_calculations::chain_cx_rank_nullity;
-use solar::utilities::index::{BiMapSequential, histogram};
-use solar::cell_complexes::simplices_unweighted::maximal_cliques::{    
+use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
+use solar::utilities::statistics::histogram;
+use solar::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec 
 }; 
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
@@ -76,6 +77,17 @@ fn main() {
     // println!("{:?}", &root );
 
     explore( & root, &mut poly_complex_facets );
+
+    //  VERIFY COMPATIBILITY
+    //  --------------------
+
+    for poly in poly_complex_facets.iter() {
+        verify_that_barcode_is_compatible(
+            &   root,
+            &   poly
+        );
+    }
+    
 
     //  REPORT
     //  ------

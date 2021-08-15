@@ -1,7 +1,7 @@
 
-use crate::polytopes::polytope::Polytope;
-use crate::polytopes::polytope_faces::{poly_faces_by_codim, polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
-use crate::intervals_and_ordinals::{OrdinalData};
+use crate::polytope::object_def::Polytope;
+use crate::polytope::faces::{poly_faces_by_codim, polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
+use solar::utilities::sequences_and_ordinals::{BiMapSequential};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use std::cmp::{PartialOrd};
 use std::fmt::Debug;
@@ -45,13 +45,13 @@ type CellID     =   usize;
 
 
 
-/// Given an OrdinalData object representing a bijection between {all polyhedra
+/// Given an BiMapSequential object representing a bijection between {all polyhedra
 /// in a complex} and {0, .., n}, generate the corresponding boundary matrix with
 /// indices in {0, .., n} and coefficients in the 2-element field GF2.
 /// 
 /// The matrix has integer indices. 
 pub fn  polyhedral_boundary_matrix_binary_coeff(
-            polyhedra_ordinal_data: & OrdinalData< Polytope >,       
+            polyhedra_ordinal_data: & BiMapSequential< Polytope >,       
         )
         -> 
         Vec< Vec< ( CellID, bool ) > >

@@ -3,7 +3,7 @@ use crate::utilities::*;
 use crate::intervals_and_ordinals::*;
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
 use solar::reduce::vec_of_vec::{clear_cols};
-use solar::utilities::index::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram};
+use solar::utilities::indexing_and_bijection::{SuperVec, SuperIndex, sort_perm, inverse_perm, histogram};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use num::rational::Ratio;
 use std::collections::{HashSet, HashMap};
