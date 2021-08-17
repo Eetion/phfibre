@@ -10,12 +10,12 @@ use std::collections::HashMap;
 
 
 /// 
-pub fn  dowker_nerve(
+pub fn  dowker_nerve_complex_facets(
             poly_complex_facets:            & Vec< Polytope >,
             poly_complex_vertex_order_map:  & HashMap< Polytope, usize >
         )
         -> 
-        BiMapSequential< Vec< usize > >
+        Vec< Vec< usize > >
 {
     let mut dowker_nerve_facets         =   Vec::new();
     for poly_complex_facet in poly_complex_facets {
@@ -35,9 +35,10 @@ pub fn  dowker_nerve(
         
     }
 
-    let cell_dim_max        =   dowker_nerve_facets.iter().map(|x| x.len() - 1 ).max().unwrap(); // this may DIFFER from the dimension of the corresponding polytope
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &dowker_nerve_facets, cell_dim_max );    
+    // let cell_dim_max        =   dowker_nerve_facets.iter().map(|x| x.len() - 1 ).max().unwrap(); // this may DIFFER from the dimension of the corresponding polytope
+    // let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &dowker_nerve_facets, cell_dim_max );    
 
-    BiMapSequential::from_vec( simplex_sequence )
+    // BiMapSequential::from_vec( simplex_sequence )
+    dowker_nerve_facets
     
 }

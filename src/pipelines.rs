@@ -5,7 +5,7 @@ use crate::polytope::object_def::Polytope;
 use crate::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
 use crate::polytope::intersection::{polytope_intersection};
 use crate::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
-use crate::polytope::nerve::dowker_nerve;
+use crate::polytope::nerve::dowker_nerve_complex_facets;
 use crate::rank_calculations::chain_cx_rank_nullity;
 use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
 use solar::utilities::statistics::histogram;
@@ -161,9 +161,13 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     //  REPORT
     //  ------
 
+    println!("BASE SPACE");
+    println!("simplices of the base space: {:?}", & simplex_sequence);
+
     println!("POLYHEDRAL COMPLEX FACETS");
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
+    println!("number of facets (binned by number of vertices): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );      
 
     let poly_complex_bimapsequential    =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
     let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
@@ -186,17 +190,6 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
 
     let mut intersection_dim_bins  =   Vec::from_iter( std::iter::repeat(0).take( poly_complex_dim_top + 1) );
 
-    for count_a in 0 .. num_facets{
-        for count_b in count_a + 1 .. num_facets {
-            if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
-                dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
-                dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
-                let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
-                intersection_dim_bins[ dim ] += 1              
-            }
-        }
-    }
-
     let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
    
     let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
@@ -208,21 +201,31 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     println!("betti numbers (of polyhedral complex): {:?}", &poly_complex_betti_vec);
 
 
+    for count_a in 0 .. num_facets{
+        for count_b in count_a + 1 .. num_facets {
+            if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
+                dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
+                dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
+                let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
+                intersection_dim_bins[ dim ] += 1              
+            }
+        }
+    }    
     println!("INTERSECTIONS");        
     println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );    
 
     
     // dowker complex
 
-    let dowker_complex_facet_bimapseq       =       dowker_nerve(
+    let dowker_complex_facets               =       dowker_nerve_complex_facets(
                                                         & poly_complex_facets,
                                                         & poly_complex_bimapsequential.val_to_ord
                                                     );
     
-    let dowker_complex_dim_top              =   dowker_complex_facet_bimapseq.ord_to_val.iter().map(|x| x.len()-1 ).max().unwrap();
+    let dowker_complex_dim_top              =   dowker_complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
 
     let dowker_complex_simplex_sequence     =   ordered_subsimplices_up_thru_dim_concatenated_vec( 
-                                                    & dowker_complex_facet_bimapseq.ord_to_val, 
+                                                    & dowker_complex_facets, 
                                                       dowker_complex_dim_top
                                                 );    
     let dowker_complex_cell_dims: Vec<_>    =   dowker_complex_simplex_sequence.iter().map(|x| x.len()-1 ).collect();
@@ -237,8 +240,8 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
                                                 );
 
     println!("DOWKER NERVE COMPLEX FACETS");                                                        
-    println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facet_bimapseq.ord_to_val.len() );
-    println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facet_bimapseq.ord_to_val.iter().map(|x| x.len()-1 ) ) );    
+    println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facets.len() );
+    println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facets.iter().map(|x| x.len()-1 ) ) );    
 
     println!("DOWKER NERVE COMPLEX CELLS");        
     println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );

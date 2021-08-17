@@ -26,7 +26,7 @@ type Fil = usize;
 // type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
 // type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
-
+// use indicatif::{HumanDuration, ProgressBar, ProgressStyle};
 
 
 
@@ -141,9 +141,9 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
                                             & ranks,
                                             & barcode
                                         );
-        println!("initial quota: {:?}", &bars_degn_quota);
-        println!("rank vec: {:?}", ranks.rank_boundaries_vec());
-        println!("barcode.num_bars_fin_per_dim: {:?}", barcode.num_bars_fin_per_dim());
+        // println!("initial quota: {:?}", &bars_degn_quota);
+        // println!("rank vec: {:?}", ranks.rank_boundaries_vec());
+        // println!("barcode.num_bars_fin_per_dim: {:?}", barcode.num_bars_fin_per_dim());
 
         // level set sizes
         let lev_set_sizes           =   LevelSetSizes{ pointers: vec![0] };
@@ -278,7 +278,6 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             FilRaw:     Clone + Debug + Ord + Hash
 { 
 
-    let mut first_pass_was_true = false;
 
     // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
         
@@ -354,7 +353,7 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             }
         }
         if push {
-            println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) )   );
+            // println!("num results: {:?}",  histogram( results.iter().map(|x| x.dim_cellagnostic().unwrap() ) )   );
             results.push( poly ); 
         }
 
@@ -960,6 +959,8 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
             }
         }
     }
+
+    // spinner.finish_and_clear();
 }
 
 //  ---------------------------------------------------------------------------  
