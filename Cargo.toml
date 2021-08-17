@@ -8,9 +8,9 @@ edition = "2018"
 
 [dependencies]
 solar = { path = "/Users/gh10/a/c/l/r/solar" }
-exhact = { path = "/Users/gh10/a/c/pr/xh/r/git" }
 num = "0.4.0"
 num-traits = "0.2.14"
 ordered-float = "2.7.0"
 itertools = "0.10.0"
 rand = "0.8.3"
+# exhact = { path = "/Users/gh10/a/c/pr/xh/r/git" }
