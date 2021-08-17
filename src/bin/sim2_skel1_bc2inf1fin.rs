@@ -1,6 +1,6 @@
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
-use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
 use phfibre::polytope::intersection::{polytope_intersection};
 use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
 use phfibre::rank_calculations::chain_cx_rank_nullity;
@@ -94,10 +94,10 @@ fn main() {
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
 
-    let poly_complex_ordinal_data   =   poly_complex_facets_to_whole_complex_ordinal_data( & poly_complex_facets );
-    let poly_complex_dims           =   Vec::from_iter( poly_complex_ordinal_data.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
+    let poly_complex_bimapsequential   =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
+    let poly_complex_dims           =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
     let poly_complex_dim_top        =   poly_complex_dims.iter().max().unwrap();    
-    println!("number of polytopes (total): {:?}", poly_complex_ordinal_data.ord_to_val.len() ); 
+    println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
     println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
     let num_facets              =   poly_complex_facets.len();
@@ -127,7 +127,7 @@ fn main() {
 
     println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );
 
-    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_ordinal_data );
+    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
     // for (col_count, col) in poly_complex_differential.iter().enumerate() {
     //     println!("{:?} {:?}", col_count, col );
     // }

@@ -1,9 +1,10 @@
 
 use phfibre::phfibre::{Node, explore, verify_that_barcode_is_compatible};
 use phfibre::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
-use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_ordinal_data};
+use phfibre::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
 use phfibre::polytope::intersection::{polytope_intersection};
 use phfibre::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
+use phfibre::polytope::nerve::dowker_nerve;
 use phfibre::rank_calculations::chain_cx_rank_nullity;
 use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
 use solar::utilities::statistics::histogram;
@@ -16,12 +17,9 @@ use solar::cell_complexes::simplices_unweighted::boundary_matrices::{
 use solar::rings::field_prime::GF2;
 use std::iter::FromIterator;
 use ordered_float::OrderedFloat;
-use phfibre::intervals_and_ordinals::{to_ordered_float};
 
 type RingEltRational = OrderedFloat<f64>;
 type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
-
-
 
 
 fn main() { 
@@ -38,31 +36,18 @@ fn main() {
     let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);    
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
-    let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
-    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
-
-    println!("{:?}", & cell_dims);
-    println!("{:?}", & boundary);    
+    let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
+    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone()); 
 
 
     //  DEFINE THE BARCODE + INVERSE BARCODE
     //  ------------------------------------
 
-    let barcode_inf_dim     =   vec![0];    
-    let barcode_inf_brn     =   to_ordered_float( & vec![0.] );
-
-    let barcode_fin_dim     =   Vec::new();    
-    let barcode_fin_brn     =   Vec::new();
-    let barcode_fin_die     =   Vec::new();
-
-
-    let barcode             =   Barcode::new(
-                                    barcode_inf_dim,
-                                    barcode_inf_brn,
-                                    barcode_fin_dim,
-                                    barcode_fin_brn,
-                                    barcode_fin_die
-                                );   
+    let barcode             =   Barcode{
+                                    inf: vec![ BarInfinite{dim:0,birth:0} ],
+                                    fin: vec![ ],
+                                    ordinal: ordinate_unique_vals( & vec![ 0 ] ),
+                                };
     
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
             
@@ -85,14 +70,25 @@ fn main() {
                         // last_must_be_crit,
                 );
 
-    let mut poly_complex_facets         =   Vec::new();                                
+    let mut poly_complex_facets     =   Vec::new();                                
 
-   //  GATHER RESULTS
+    //  GATHER RESULTS
     //  --------------
 
     // println!("{:?}", &root );
 
     explore( & root, &mut poly_complex_facets );
+
+    //  VERIFY COMPATIBILITY
+    //  --------------------
+
+    for poly in poly_complex_facets.iter() {
+        verify_that_barcode_is_compatible(
+            &   root,
+            &   poly
+        );
+    }
+    
 
     //  REPORT
     //  ------
@@ -100,10 +96,10 @@ fn main() {
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
 
-    let poly_complex_ordinal_data   =   poly_complex_facets_to_whole_complex_ordinal_data( & poly_complex_facets );
-    let poly_complex_dims           =   Vec::from_iter( poly_complex_ordinal_data.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
-    let poly_complex_dim_top        =   poly_complex_dims.iter().max().unwrap();    
-    println!("number of polytopes (total): {:?}", poly_complex_ordinal_data.ord_to_val.len() ); 
+    let poly_complex_bimapsequential    =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
+    let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
+    let poly_complex_dim_top            =   poly_complex_dims.iter().max().unwrap();    
+    println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
     println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
     let num_facets              =   poly_complex_facets.len();
@@ -133,26 +129,56 @@ fn main() {
 
     println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );
 
-    println!("here");
-    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_ordinal_data );
-    println!("there");    
+    let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
+    // for (col_count, col) in poly_complex_differential.iter().enumerate() {
+    //     println!("{:?} {:?}", col_count, col );
+    // }
+   
     let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
                                                     & poly_complex_differential,
                                                     & poly_complex_dims,
                                                     GF2{}
-                                                );
-    println!("everywhere");                                                    
+                                                );                                                  
     let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
-    println!("betti numbers: {:?}", &poly_complex_betti_vec)
+    println!("betti numbers: {:?}", &poly_complex_betti_vec);
 
+    
+    
+    // ---------------------------------------------------------------------------------------------------
+    //  DOWKER NERVE
+
+
+    let dowker_complex_facet_bimapseq       =       dowker_nerve(
+                                                        & poly_complex_facets,
+                                                        & poly_complex_bimapsequential.val_to_ord
+                                                    );
+    
+    let dowker_complex_dim_top              =   dowker_complex_facet_bimapseq.ord_to_val.iter().map(|x| x.len()-1 ).max().unwrap();
+
+    let dowker_complex_simplex_sequence     =   ordered_subsimplices_up_thru_dim_concatenated_vec( 
+                                                    & dowker_complex_facet_bimapseq.ord_to_val, 
+                                                      dowker_complex_dim_top
+                                                );    
+    let dowker_complex_cell_dims: Vec<_>    =   dowker_complex_simplex_sequence.iter().map(|x| x.len()-1 ).collect();
+
+    let dowker_complex_bimap_sequential     =   BiMapSequential::from_vec( dowker_complex_simplex_sequence.clone() );
+    let dowker_complex_boundary             =   boundary_matrix_from_complex_facets(dowker_complex_bimap_sequential, ring.clone()); 
+
+    let dowker_complex_rank_nullity         =   chain_cx_rank_nullity(
+                                                    & dowker_complex_boundary,
+                                                    & dowker_complex_cell_dims,
+                                                      ring.clone()
+                                                );
+    println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );
+    println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
+    println!("betti numbers (via nerve dowker): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );
 
 }  
 
-// RESULTS
-// 
-// number of facets (total): 2
-// number of facets (binned by dimension): [0, 2]
-// number of polytopes (total): 5
-// number of polytopes (binned by dimension): [3, 2]
-// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [1, 0]
-// betti numbers: [1, 0]
+// number of facets (total): 18
+// number of facets (binned by dimension): [0, 18]
+// number of polytopes (total): 36
+// number of polytopes (binned by dimension): [18, 18]
+// number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [18, 0]
+// betti numbers: [1, 1]
+// betti numbers (via nerve dowker): [1, 1]

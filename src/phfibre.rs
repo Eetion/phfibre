@@ -1041,6 +1041,26 @@ pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt >(
     barcode_true.inf.sort();
     barcode_true.fin.sort();
 
+
+    // print out any discrepencies
+
+    if &barcode_proposed.inf != &barcode_true.inf {
+        println!("barcode_proposed.inf: {:?}", &barcode_proposed.inf);
+        println!("barcode_true.inf: {:?}",     &barcode_true.inf);        
+    }
+
+    if &barcode_proposed.fin != &barcode_true.fin {
+        println!("barcode_proposed.fin: {:?}", &barcode_proposed.fin);
+        println!("barcode_true.fin: {:?}",     &barcode_true.fin);        
+    }  
+    
+    if &barcode_proposed.ordinal.ord_to_val != &barcode_true.ordinal.ord_to_val {
+        println!("barcode_proposed.ordinal.ord_to_val: {:?}", &barcode_proposed.ordinal.ord_to_val);
+        println!("barcode_true.ordinal.ord_to_val: {:?}",     &barcode_true.ordinal.ord_to_val);        
+    }       
+
+    // return true iff there are no discrepencies
+
     return  &barcode_proposed.inf   ==  &barcode_true.inf
             &&
             &barcode_proposed.fin   ==  &barcode_true.fin

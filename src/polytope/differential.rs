@@ -1,6 +1,6 @@
 
 use crate::polytope::object_def::Polytope;
-use crate::polytope::faces::{poly_faces_by_codim, polys_faces, poly_complex_facets_to_whole_complex_ordinal_data};
+use crate::polytope::faces::{poly_faces_by_codim, polys_faces, poly_complex_facets_to_whole_complex_bimapsequential};
 use solar::utilities::sequences_and_ordinals::{BiMapSequential};
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use std::cmp::{PartialOrd};

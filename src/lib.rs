@@ -5,6 +5,6 @@ pub mod intervals_and_ordinals;
 pub mod rank_calculations;
 pub mod polytope;
 pub mod permutation_test;
-pub mod facet_pipeline;
+pub mod pipelines;
 // pub mod cross_check;
 // pub mod facets;

@@ -445,7 +445,7 @@ pub fn  polys_faces(
 /// (ii) order these polyhedra in ascending order, first by dimension and
 /// second by the order derived by Rust on polyhedra, (iii) encode this ordering
 /// in an BiMapSequential struct.
-pub fn  poly_complex_facets_to_whole_complex_ordinal_data(
+pub fn  poly_complex_facets_to_whole_complex_bimapsequential(
             complex_facets: & Vec< Polytope >,       
         )
         ->
