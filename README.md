@@ -14,11 +14,18 @@ cd path/to/this/repo
 cargo run --bin file_name --release
 ```
 
-* **Example** Try the following
+* **Example** Try the following for a simplicial complex:
 
 ```
 cd path/to/this/repo
 cargo run --bin B_m_n --release
+```
+
+and the following for a CW complex:
+
+```
+cd path/to/this/repo
+cargo run --bin T_2 --release
 ```
 
 # Notes for the developers

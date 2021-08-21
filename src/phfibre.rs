@@ -82,7 +82,8 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt>
 {
     boundary:               Vec< Vec< ( Cell, RingElt ) > >,  // boundary matrix reprsented as a vector of vectors
     barcode:                &'a Barcode< FilRaw >,          // the target barcode (contains useful ordinal data)
-    barcode_inverse:        &'a BarcodeInverse,             // pointer to a central register that maps bar endpoints to bar ids       
+    barcode_inverse:        &'a BarcodeInverse,             // pointer to a central register that maps bar endpoints to bar ids     
+    cell_id_to_prereqs:     Option< &'a Vec< Vec< usize > > >,        //  cell_id_to_prereqs[m] = cells that must be in K_{in} before cell m can be added to K_{in}
 
     ring:                   RingOp,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
@@ -119,7 +120,8 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
     pub fn make_root(   
         boundary:               Vec< Vec< (Cell, RingElt)>>,
         barcode:            &'a Barcode< FilRaw >,
-        barcode_inverse:    &'a BarcodeInverse,        
+        barcode_inverse:    &'a BarcodeInverse,    
+        cell_id_to_prereqs:     Option< &'a Vec< Vec< usize > > >,
         cell_dims:          &   Vec< usize >,   
         ring:                   RingOp,  
         // last_must_be_crit:      bool,        
@@ -202,6 +204,7 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
             boundary:               boundary.clone(),
             barcode:            &   barcode,
             barcode_inverse:    &   barcode_inverse,
+            cell_id_to_prereqs:     cell_id_to_prereqs,
             ring:                   ring.clone(),
             boundary_buffer:        boundary_buffer,
             bars_degn_quota:        bars_degn_quota,
@@ -272,7 +275,10 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
 //  ---------------------------------------------------------------------------  
 
 
-pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt >, results: &mut Vec< Polytope > )
+pub fn  explore< FilRaw, RingOp, RingElt >( 
+        node:       &       Node < FilRaw, RingOp, RingElt >, 
+        results:    &mut    Vec < Polytope > 
+    )
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
             RingElt:    Clone + Debug + PartialOrd,
             FilRaw:     Clone + Debug + Ord + Hash
@@ -1128,12 +1134,15 @@ mod tests {
                                         ordinal: ordinate_unique_vals( & vec![0,1,2,3] )
                                     };
         
-        let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );                                    
+        let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );    
+        
+        let cell_id_to_prereqs  =   None; // no prerequisites for any cell
 
         let root_node           =  Node::make_root(
                                             boundary.clone(),
                                         &   barcode,
                                         &   barcode_inverse,
+                                            cell_id_to_prereqs,
                                         &   cell_dims,  
                                             ring.clone()
                                             // last_must_be_crit,

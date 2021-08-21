@@ -19,6 +19,8 @@ use std::hash::Hash;
 
 use ordered_float::OrderedFloat;
 
+type F  =   num::rational::Ratio<i64>;
+
 
 // use solar::utilities::sequences_and_ordinals::BiMapSequential;
 // use crate::phfibre::{Node, explore};
@@ -38,63 +40,6 @@ use ordered_float::OrderedFloat;
 
 
 
-
-
-
-pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
-            complex_facets:     & Vec< Vec< usize > >,
-            barcode:            & Barcode< FilRaw >,
-            ring:               & RingOp
-        )
-        ->
-        Vec< Polytope >
-        where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
-                RingElt:    Clone + Debug + Ord,
-                FilRaw:     Clone + Debug + Ord + Hash,
-{
-
-    //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
-    //  --------------------------------------------
-
-    let max_dim             =   complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, max_dim);        
-    let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
-
-    let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
-    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());     
-
-    
-    //  DEFINE THE INVERSE BARCODE
-    //  ------------------------------------ 
-    
-    let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );  
-
-    //  DEFINE THE ROOT NODE + RESULTS VECTOR
-    //  -------------------------------------
-
-    let root =  Node::make_root(
-                        boundary.clone(),
-                    &   barcode,
-                    &   barcode_inverse,
-                    &   cell_dims,  
-                        ring.clone(),
-                        // last_must_be_crit,
-                );
-
-    let mut results         =   Vec::new();                                
-
-    //  GATHER RESULTS
-    //  --------------
-
-    explore( & root, &mut results );    
-
-    //  RETURN RESULTS
-    //  -------------------
-
-    results
-
-}
-
 //  --------------------------------------------------------------------------------------------
 //  BOUNDARY MATRIX PIPELINE
 //  --------------------------------------------------------------------------------------------
@@ -104,10 +49,11 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 /// 
 /// The boundary matrix is stored in column-major vec-of-vec format.  Entries in each column should
 /// appear in sorted order, according to row index.  The homological degree of
-/// each basis vector (i.e. chain) is recorded in chain_degrees.
+/// each basis vector (i.e. chain) is recorded in `cell_dims`.
 pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
-            boundary_matrix:        &   Vec< Vec< ( usize, RingElt ) > >,
-            pure_degrees:           &   Vec< usize >,            
+            boundary:               &   Vec< Vec< ( usize, RingElt ) > >,
+            cell_id_to_prereqs:         Option< & Vec< Vec< usize > > >,
+            cell_dims:              &   Vec< usize >,            
             barcode:                &   Barcode< FilRaw >,
             ring:                   &   RingOp,            
         )
@@ -116,6 +62,51 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
             FilRaw:     Clone + Debug + Ord + Hash,  
 {
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
+    let root =  Node::make_root(
+                        boundary.clone(),
+                    &   barcode,
+                    &   barcode_inverse,
+                        cell_id_to_prereqs,
+                    &   cell_dims,  
+                        ring.clone(),
+                );
+
+    let mut poly_complex_facets     =   Vec::new();                                
+
+    //  GATHER RESULTS
+    //  --------------
+
+    println!("\nNEW COMPUTATION\n--------------------------------------------------------------------------------------------- ");
+
+    println!("BOUNDARY MATRIX");
+    println!("boundary matrix sparse columns: {:?}", & boundary);
+    println!("BARCODE");
+    println!("barcode: {:?}", &barcode);
+
+    let start = std::time::Instant::now();
+    explore( & root, &mut poly_complex_facets );
+    let duration = start.elapsed();
+    println!("TIME TO COMPUTE FIBRE FACETS");
+    println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
+    
+    println!("\nANALYSIS");
+
+    //  VERIFY COMPATIBILITY
+    //  --------------------
+
+    for poly in poly_complex_facets.iter() {
+        verify_that_barcode_is_compatible(
+            &   root,
+            &   poly
+        );
+    }
+    println!("Each polytope facet has been checked for compatiblity with the given barcode.");
+    
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
+    );
+        
 }
 
 
@@ -152,10 +143,10 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
             
 
-    //  ALLOW FOR DEGENERATE CELLS AFTER THE LAST FINITE BARCODE ENDPOINT
+    //  NO PREREQUISITES HAVE TO BE SPECIFIED FOR ANY SIMPLEX
     //  -----------------------------------------------------------------
 
-    // let last_must_be_crit   =   false;
+    let cell_id_to_prereqs  =   None;
 
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
@@ -165,6 +156,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
                         boundary.clone(),
                     &   barcode,
                     &   barcode_inverse,
+                        cell_id_to_prereqs,
                     &   cell_dims,  
                         ring.clone(),
                 );
@@ -206,6 +198,15 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     );
     
 }                    
+
+
+
+
+//  --------------------------------------------------------------------------------------------
+//  OUTPUT ANALYSIS / DISPLAY
+//  --------------------------------------------------------------------------------------------
+
+
 
 
 
