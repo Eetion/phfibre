@@ -13,8 +13,6 @@ use std::iter::{FromIterator, repeat};
 use itertools::Itertools;
 // use itertools::object_defs::{MultiProduct, Combinations};
 
-type Fil = usize;
-
 
 
 
@@ -413,6 +411,34 @@ pub fn  poly_faces_by_codim(
 
 
 
+//  WORKS CORRECTLY BUT DEPRECATED IN FAVOR OF A FASTER IMPLEMENTATION
+// pub fn  polys_faces_var( 
+//             polys: &Vec< Polytope >, 
+//             face_dim: usize,
+//         ) 
+//         -> 
+//         Vec< Polytope > 
+// {
+//     let mut faces                   =   Vec::new();
+//     let mut buffer                  =   Vec::new();
+//     let mut receiver                =   Vec::new();
+
+//     for poly in polys.iter() {
+//         receiver                    =   poly_faces( poly, face_dim );
+//         receiver.sort();
+//         buffer.clear();
+//         buffer.extend(
+//             faces.iter().cloned().merge( receiver.iter().cloned() ).dedup()
+//         );
+//         faces.clear();
+//         faces.append( &mut buffer );
+//     }
+
+//     faces 
+                                     
+// }
+
+
 /// Given a collection of polytopes, enumerate all faces of a given dimension -- IN SORTED ORDER.
 pub fn  polys_faces( 
             polys: &Vec< Polytope >, 
@@ -421,22 +447,17 @@ pub fn  polys_faces(
         -> 
         Vec< Polytope > 
 {
-    let mut faces                   =   Vec::new();
-    let mut buffer                  =   Vec::new();
-    let mut receiver                =   Vec::new();
+    let mut faces                   =   std::collections::HashSet::new();
 
     for poly in polys.iter() {
-        receiver                    =   poly_faces( poly, face_dim );
-        receiver.sort();
-        buffer.clear();
-        buffer.extend(
-            faces.iter().cloned().merge( receiver.iter().cloned() ).dedup()
+        faces.extend(    
+            poly_faces( poly, face_dim )
         );
-        faces.clear();
-        faces.append( &mut buffer );
     }
 
-    faces 
+    let mut sorted_faces            =   Vec::from_iter( faces.into_iter() );
+    sorted_faces.sort();
+    sorted_faces
                                      
 }
 

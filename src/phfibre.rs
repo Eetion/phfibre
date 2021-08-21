@@ -317,14 +317,15 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
 
 
     //  SHORT CIRCUIT IF WE HAVE ALREADY BEEN DOWN THIS ROAD
-    // if node.lev_set_sizes.size_last()          ==  Some( 0 ) {
-    //     for poly in results.iter() {
-    //         if poly.contains_extension( & node.polytope ) { return }
-    //     }
-    // }
-    
-        // with short circuit: 12.926543132
-        // without short circuit: 44.080082316s
+        // BENCHMARKS ON THE SQUARE SUBDIVIDED INTO TWO TRIANGLES (NO FINITE BARS)
+        // with    this short circuit: 12.926543132
+        // without this short circuit: 44.080082316s    
+    if node.lev_set_sizes.size_last()          ==  Some( 0 ) {
+        for poly in results.iter() {
+            if poly.contains_extension( & node.polytope ) { return }
+        }
+    }
+
 
     //  PUSH LEAF NODE TO RESULTS
 

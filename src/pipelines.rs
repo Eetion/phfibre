@@ -174,12 +174,12 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     //  GATHER RESULTS
     //  --------------
 
-    // println!("{:?}", &root );
+    println!("\nNEW COMPUTATION\n--------------------------------------------------------------------------------------------- ");
 
     let start = std::time::Instant::now();
     explore( & root, &mut poly_complex_facets );
     let duration = start.elapsed();
-    println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
+    let time_message_poly_facets = format!("Time elapsed to compute facets of PH fibre: {:?}", duration);
 
     //  VERIFY COMPATIBILITY
     //  --------------------
@@ -201,14 +201,26 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     println!("barcode: {:?}", &barcode);
 
     println!("POLYHEDRAL COMPLEX FACETS");
+    println!("{:?}", time_message_poly_facets);
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
     println!("number of facets (binned by number of vertices): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );      
 
+    let start = std::time::Instant::now();    
     let poly_complex_bimapsequential    =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
+    let duration = start.elapsed();
+    let time_message_poly_faces = format!("Time elapsed to compute facets of PH fibre: {:?}", duration);    
+    // SQUARE EXAMPLE
+    // (old face enumerator) Time elapsed to enumerate polytope faces: 109.550845ms
+    // (new face enumerator) Time elapsed to enumerate polytope faces: 24.799084ms
+    // 2-SKEL OF 3-SIMPLEX EXAMPLE
+    // (old face enumerator) Time elapsed to enumerate polytope faces: 16.452426366s
+    // (new face enumerator) Time elapsed to enumerate polytope faces: 605.019797ms
+
     let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
     let poly_complex_dim_top            =   poly_complex_dims.iter().max().unwrap();    
-    println!("POLYHEDRAL COMPLEX CELLS");    
+    println!("POLYHEDRAL COMPLEX CELLS"); 
+    println!("{:?}", time_message_poly_faces);       
     println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
     println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
@@ -224,8 +236,6 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
                                     );
     for facet_id in 0 .. num_facets{ dismat[facet_id][facet_id] = OrderedFloat(0.) }
 
-    let mut intersection_dim_bins  =   Vec::from_iter( std::iter::repeat(0).take( poly_complex_dim_top + 1) );
-
     let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
    
     let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
@@ -237,18 +247,20 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     println!("betti numbers (of polyhedral complex): {:?}", &poly_complex_betti_vec);
 
 
-    for count_a in 0 .. num_facets{
-        for count_b in count_a + 1 .. num_facets {
-            if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
-                dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
-                dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
-                let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
-                intersection_dim_bins[ dim ] += 1              
-            }
-        }
-    }    
-    println!("INTERSECTIONS");        
-    println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );    
+    // THIS WORKS FINE BUT IT TAKES TIME
+    // let mut intersection_dim_bins  =   Vec::from_iter( std::iter::repeat(0).take( poly_complex_dim_top + 1) );    
+    // for count_a in 0 .. num_facets{
+    //     for count_b in count_a + 1 .. num_facets {
+    //         if let Some( intersection_poly ) = polytope_intersection( &poly_complex_facets[count_a], &poly_complex_facets[count_b] ){
+    //             dismat[ count_a ][ count_b ] = OrderedFloat( 0.1 );
+    //             dismat[ count_b ][ count_a ] = OrderedFloat( 0.1 );  
+    //             let dim                 =   intersection_poly.dim_cellagnostic().unwrap();                
+    //             intersection_dim_bins[ dim ] += 1              
+    //         }
+    //     }
+    // }    
+    // println!("INTERSECTIONS");        
+    // println!("number of pairs of intersecting facets, binned by the dimension of the intersection polytope: {:?}", &intersection_dim_bins );    
 
     
     // dowker complex
