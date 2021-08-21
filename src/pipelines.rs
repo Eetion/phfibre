@@ -115,7 +115,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
             RingElt:    Clone + Debug + Ord,
             FilRaw:     Clone + Debug + Ord + Hash,  
 {
-
+    let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
 }
 
 
@@ -176,10 +176,18 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
 
     println!("\nNEW COMPUTATION\n--------------------------------------------------------------------------------------------- ");
 
+    println!("BASE SPACE");
+    println!("simplices of the base space: {:?}", & simplex_sequence);
+    println!("BARCODE");
+    println!("barcode: {:?}", &barcode);
+
     let start = std::time::Instant::now();
     explore( & root, &mut poly_complex_facets );
     let duration = start.elapsed();
-    let time_message_poly_facets = format!("Time elapsed to compute facets of PH fibre: {:?}", duration);
+    println!("TIME TO COMPUTE FIBRE FACETS");
+    println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
+    
+    println!("\nANALYSIS");
 
     //  VERIFY COMPATIBILITY
     //  --------------------
@@ -190,18 +198,28 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
             &   poly
         );
     }
+    println!("Each polytope facet has been checked for compatiblity with the given barcode.");
     
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
+    );
+    
+}                    
 
+
+
+pub fn analyze_fibre< RingOp, RingElt > (
+            poly_complex_facets:    &   Vec< Polytope >, 
+            ring:                       RingOp,            
+        )
+    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
+            RingElt:    Clone + Debug + Ord,
+{
     //  REPORT
     //  ------
 
-    println!("BASE SPACE");
-    println!("simplices of the base space: {:?}", & simplex_sequence);
-    println!("BARCODE");
-    println!("barcode: {:?}", &barcode);
-
     println!("POLYHEDRAL COMPLEX FACETS");
-    println!("{:?}", time_message_poly_facets);
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
     println!("number of facets (binned by number of vertices): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );      
@@ -244,7 +262,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
                                                     GF2{}
                                                 );                                                  
     let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
-    println!("betti numbers (of polyhedral complex): {:?}", &poly_complex_betti_vec);
+    println!("betti numbers (of polyhedral complex, Z2 coefficients): {:?}", &poly_complex_betti_vec);
 
 
     // THIS WORKS FINE BUT IT TAKES TIME
@@ -294,5 +312,5 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     println!("DOWKER NERVE COMPLEX CELLS");        
     println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );
     println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
-    println!("betti numbers (of dowker nerve): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
+    println!("betti numbers (of dowker nerve, user-specified ring coefficients): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
 }                    
