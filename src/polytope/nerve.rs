@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 
 
-/// 
+/// Generates the dowker dual to the nerve complex of the set of facets.
 pub fn  dowker_nerve_complex_facets(
             poly_complex_facets:            & Vec< Polytope >,
             poly_complex_vertex_order_map:  & HashMap< Polytope, usize >

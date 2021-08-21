@@ -340,7 +340,9 @@ impl Polytope {
         for cell_id_a in 0 .. self.num_cells() {
             
             for cell_id_b in 0 .. self.num_cells() {
-                // the preorder induced by mapping to level set ordinals must be respected
+                // let "pull back" refer to the "pull back" preorder on cells induced by the mapping of cells to level set; 
+                // this is a binary relation on the set of cells.  the "pull back" for other should be a superset of the 
+                // "pull back" for self
                 if  (
                         self.cell_id_to_lev_set_ord( cell_id_a )    >=  self.cell_id_to_lev_set_ord( cell_id_b )     
                     )
@@ -355,6 +357,53 @@ impl Polytope {
 
         return true
     }
+
+
+    /// Given a partially-built polytope `othr` (meaning that `othr.cell_id_to_lev_set_ord` contains some
+    /// values equal to the number of cells in the complex, implying that these `cell_id`s have not been
+    /// assigned to a level set), determine whether `self` contains a polytope that the `othr` polytope 
+    /// could extend to.
+    pub fn  contains_extension( &self, othr: & Polytope ) -> bool {
+
+        let num_cells       =   self.num_cells();
+        
+        // polytopes must have the same number of cells and the same number of fmin values
+        if  num_cells != othr.num_cells() 
+        { return false }
+
+        // the bounds for each cell must be respected
+        for cell_id in 0 .. num_cells {
+            if  othr.cell_id_to_lev_set_ord( cell_id ).unwrap() < num_cells
+                &&
+                (
+                    othr.cell_id_to_fmin( cell_id )   <   self.cell_id_to_fmin( cell_id )
+                    ||
+                    othr.cell_id_to_fmax( cell_id )   >   self.cell_id_to_fmax( cell_id )
+                )
+
+            { return false }                
+        }
+        
+        for cell_id_a in 0 .. self.num_cells() {
+            
+            for cell_id_b in 0 .. self.num_cells() {
+                // let "pull back" refer to the pull back preorder on cells induced by the mapping of cells to level set; 
+                // this is a binary relation on the set of cells.  the "pull back" for other should be a superset of the 
+                // "pull back" for self
+                if  (
+                        self.cell_id_to_lev_set_ord( cell_id_a )    >=  self.cell_id_to_lev_set_ord( cell_id_b )     
+                    )
+                    &&
+                    ! (
+                        othr.cell_id_to_lev_set_ord( cell_id_a )    >=  othr.cell_id_to_lev_set_ord( cell_id_b )
+                    )
+                    
+                { return false }
+            }
+        }
+
+        return true
+    }    
 
 }
 
@@ -673,6 +722,31 @@ mod tests {
     fn test_enumerate_poly_test_set_40_total() {
         let polys               =   enumerate_poly_test_set_40_total();
         for poly in polys.iter().enumerate() { println!("{:?}", poly)}  
+    }
+
+
+    #[test]
+    fn test_contains_extension() {
+        let poly_a              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1,1,2],
+                                        data_c_to_l:        vec![0,1,2,3],
+                                    };        
+        let poly_b              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1,2],
+                                        data_c_to_l:        vec![0,1,1,2],
+                                    };                                
+        let poly_c              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1],
+                                        data_c_to_l:        vec![0,1,1,4],
+                                    };    
+        let poly_d              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1],
+                                        data_c_to_l:        vec![0,0,1,4],
+                                    };                                        
+                                    
+        assert!(    poly_a.contains_extension( &poly_b ) );
+        assert!(    poly_a.contains_extension( &poly_c ) );    
+        assert!( !  poly_a.contains_extension( &poly_d ) );                
     }
 
 }    

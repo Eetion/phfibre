@@ -21,15 +21,50 @@ type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not impleme
 
 
 
+//  QUOTAS
+//      DEGEN BARS (POS): Vec<usize> (number of degn bars left to make in each dim) 
+//      DEGEN BARS (NEG): Vec<usize> number of bars left to cap-off in this level setTHAT DOESN'T CARe WHAT LEV_SET YOU'RE IN (but separated by dimension); FOR NEG CELLS, JUST KEEP A TEMPORARY RESEVOIR (Vec<usize>) TO COUNT THE NUMBER OF POS CELLS YOU HAVE TO CAP IN EACH DIMENSION // THIS IS A PLACE WERE WE COULD USE THE CHECK TO SEE IF THE CYCLE CREATED IS EVER BOUNDED?  NOT SURE
+//      NON-DEGN BARS: JUST KEEP A VEC OF VEC OF BARS SEPARATED BY DIMENSION
+//      NUM_BARS_BORN_PER_CRIT_VAL: Vec<usize>
+//  COUNTS
+//      POS_CELLS_THIS_LEV_SET: 
+//      NEG_CELLS_THIS_LEV_SET_DEGN:
+
+
+
 //  possibly push result (involves a check of whether the current level set is critical and if so contains all necessary cells)
-//  possibly start new level set
-//  for s in cell_ids_out
-//      if boundary(s) = 0
-//          if there's space in pair_quota + crit_quota
-//              add s to complex and mark ask positive
-//      else if max supp( boundary(s) ) < #(K_in)
-//          if there space in pair_quota + degn_quota
-//              add s to complex and clear boundary matrix
+
+//
+//  !!!! DON'T HAVE TO UPDATE QUOTA FOR POS_CRIT_CELLS WHEN ENSURING THAT A LEVEL SET IS CRITICAL: JUST KEEP THE QUOTA IN FORM Vec< Vec< usize>>
+//  check to see if a prior result precontains this one
+//  if lev_set_is_crit{
+//      if  self.num_neg_cells_this_lev_set_degn - self.num_pos_cells_this_lev_set == self.quota.num_bars_born_per_crit_val[self.current_crit_val] // the right number of births and degenerate pairs
+//          &&
+//          self.num_neg_cells_this_lev_set_degn == self.quota.num_bars_ended_per_crit_val // the right number of deaths
+//      {
+//          // no need to grow current lev set any longer
+//          start new level set
+//          try_to_grow_current_lev_set = false
+//      }
+//  else if self.num_neg_cells_this_lev_set_degn - self.num_pos_cells_this_lev_set == 0
+//          &&
+//          self.current_lev_set_not_empty
+//      {
+//          // may still need to try to grow the current level set    
+//          start new level set
+//          try_to_grow_current_lev_set = true
+//      }
+// }
+//  if try_to_grow_current_lev_set{
+//      for s in cell_ids_out
+//          if boundary(s) = 0
+//              if there's space in pair_quota + crit_quota  <--- crit_quota 
+//                 add s to complex and mark as positive
+//          else if max supp( boundary(s) ) < #(K_in)  AND   (possibly) another test is passed in the sense that F(polytope, cell_id) = true for some function F
+//              if there space in pair_quota + degn_quota
+//                  add s to complex and clear boundary matrix
+// }
+
 
 
 
@@ -49,8 +84,12 @@ type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not impleme
 
 
 fn pos_quota< FilRaw, RingOp, RingElt >(  node: & Node< FilRaw, RingOp, RingElt >, dim ) -> usize {
-    
 }
+
+
+// struct pos_neg_quota
+//      hashmap: barfinite -> usize
+//      hashmap: farinfinite -> usize
 
 
 

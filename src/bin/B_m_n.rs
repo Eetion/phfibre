@@ -32,6 +32,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    println!("");    
+    println!("B_3^1:");        
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -76,6 +78,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    println!("");    
+    println!("B_3^2:");        
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -120,6 +124,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    println!("");    
+    println!("B_3^3:");
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -164,6 +170,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    println!("");    
+    println!("B_2^1:");    
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -192,6 +200,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new(); // this just defines the rational numbers
 
+    println!("");    
+    println!("B_4^1:");        
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -220,7 +230,7 @@ fn main() {
     // number of nerve dowker complex cells (total): 42
     // number of nerve dowker complex cells (binned by dimension): [9, 21, 12]
     // betti numbers (of dowker nerve): [1, 1, 0]
-    
+
 
     //  ----------------------------------------------------------------------------------------------    
     //  B_5
@@ -239,6 +249,8 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new(); // this just defines the rational numbers
 
+    println!("");    
+    println!("B_5:");        
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,

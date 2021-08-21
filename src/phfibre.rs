@@ -149,7 +149,7 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
         let lev_set_sizes           =   LevelSetSizes{ pointers: vec![0] };
 
         // polytope
-        let mut polytope            =   Polytope{ 
+        let polytope                =   Polytope{ 
                                             data_l_to_fmin:   vec![0],   // why initialize this way?  because, when recursing, we often initialize a new empty set; indeed, this is **the way** we start new level sets; this is consistent with that
                                             data_c_to_l:      Vec::from_iter( 
                                                                 std::iter::repeat( num_cells )
@@ -316,7 +316,15 @@ pub fn explore< FilRaw, RingOp, RingElt >( node: & Node< FilRaw, RingOp, RingElt
     // }
 
 
-      
+    //  SHORT CIRCUIT IF WE HAVE ALREADY BEEN DOWN THIS ROAD
+    // if node.lev_set_sizes.size_last()          ==  Some( 0 ) {
+    //     for poly in results.iter() {
+    //         if poly.contains_extension( & node.polytope ) { return }
+    //     }
+    // }
+    
+        // with short circuit: 12.926543132
+        // without short circuit: 44.080082316s
 
     //  PUSH LEAF NODE TO RESULTS
 

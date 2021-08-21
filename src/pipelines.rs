@@ -1,23 +1,24 @@
 
 use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
-use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite};
+use crate::intervals_and_ordinals::{Barcode, BarcodeInverse };
 use crate::polytope::object_def::Polytope;
 use crate::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
 use crate::polytope::intersection::{polytope_intersection};
 use crate::polytope::differential::polyhedral_boundary_matrix_binary_coeff;
 use crate::polytope::nerve::dowker_nerve_complex_facets;
 use crate::rank_calculations::chain_cx_rank_nullity;
-use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
+use solar::utilities::sequences_and_ordinals::{BiMapSequential};
 use solar::utilities::statistics::histogram;
-use solar::cell_complexes::simplices_unweighted::facets::{    
-    ordered_subsimplices_up_thru_dim_concatenated_vec 
-}; 
-use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
-    boundary_matrix_from_complex_facets 
-};   
+use solar::cell_complexes::simplices_unweighted::facets::{ ordered_subsimplices_up_thru_dim_concatenated_vec}; 
+use solar::cell_complexes::simplices_unweighted::boundary_matrices::{boundary_matrix_from_complex_facets};   
 use solar::rings::field_prime::GF2;
+use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use std::iter::FromIterator;
+use std::fmt::Debug;
+use std::hash::Hash;
+
 use ordered_float::OrderedFloat;
+
 
 // use solar::utilities::sequences_and_ordinals::BiMapSequential;
 // use crate::phfibre::{Node, explore};
@@ -29,10 +30,8 @@ use ordered_float::OrderedFloat;
 // use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
 //     boundary_matrix_from_complex_facets 
 // };   
-use solar::rings::ring::{Semiring, Ring, DivisionRing};
 // use ordered_float::OrderedFloat;
-use std::fmt::Debug;
-use std::hash::Hash;
+
 
 // type RingEltRational = OrderedFloat<f64>;
 // type RingOpRational = solar::rings::ring_native::NativeDivisionRing<RingEltRational>;
@@ -96,7 +95,39 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 
 }
 
+//  --------------------------------------------------------------------------------------------
+//  BOUNDARY MATRIX PIPELINE
+//  --------------------------------------------------------------------------------------------
 
+
+/// Compute the PH fibre of a given barcode for a given boundary matrix over a given ring.
+/// 
+/// The boundary matrix is stored in column-major vec-of-vec format.  Entries in each column should
+/// appear in sorted order, according to row index.  The homological degree of
+/// each basis vector (i.e. chain) is recorded in chain_degrees.
+pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
+            boundary_matrix:        &   Vec< Vec< ( usize, RingElt ) > >,
+            pure_degrees:           &   Vec< usize >,            
+            barcode:                &   Barcode< FilRaw >,
+            ring:                   &   RingOp,            
+        )
+    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
+            RingElt:    Clone + Debug + Ord,
+            FilRaw:     Clone + Debug + Ord + Hash,  
+{
+
+}
+
+
+//  --------------------------------------------------------------------------------------------
+//  SIMPLEX PIPELINE
+//  --------------------------------------------------------------------------------------------
+
+
+
+/// Compute the PH fibre of a given barcode for a given simplicial complex over a given ring.
+/// 
+/// The `simplex_sequence` parameter should include all simplices in the complex.
 pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
             simplex_sequence:       &   Vec< Vec< usize > >,
             barcode:                &   Barcode< FilRaw >,
@@ -145,7 +176,10 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
 
     // println!("{:?}", &root );
 
+    let start = std::time::Instant::now();
     explore( & root, &mut poly_complex_facets );
+    let duration = start.elapsed();
+    println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
 
     //  VERIFY COMPATIBILITY
     //  --------------------
@@ -163,6 +197,8 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
 
     println!("BASE SPACE");
     println!("simplices of the base space: {:?}", & simplex_sequence);
+    println!("BARCODE");
+    println!("barcode: {:?}", &barcode);
 
     println!("POLYHEDRAL COMPLEX FACETS");
     println!("number of facets (total): {:?}", poly_complex_facets.len() ); 

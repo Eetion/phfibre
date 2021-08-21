@@ -18,30 +18,37 @@ cargo run --bin file_name --release
 
 ```
 cd path/to/this/repo
-cargo run --bin sample_calc --release
+cargo run --bin B_m_n --release
 ```
 
+# Notes for the developers
+
+## Unit tests
+
+* tests have been written in tandem with the code
+* to check correctness of the main (top-level) algorithm, we
+    * checked results with computations from the original paper on PH fibre (this is the `B_m_n.rs` file)
+    * added code to most of the binary files to automatically check that each output facet (i) engenders the correct barcode, and (ii) is distinct from all other output facets.  therefore the list of output polyhedra for each input should at least form a subset of the actual whole
+    * applied two different "permutation tests" to a number of examples; these are designed to check that the algorithm returns equivalent results no matter how we permute the vertices of the underlying simplicial complex (which is to be filtered)
 
 
-# To-d0
+## To-d0
 
 - add test to check whether a given cycle must have infinite or finite lifespan
 - try exporting to Poly-make
 - convert all references to BiMapSequential to BiMapSequential
 
 
-# Debug / verification
 
-* write function to compute barcode, given equiv classes
-* write a simple program to test every permutation
-    + generate all permutations
-    + for each permutation:
-        + reduce the boundary matrix
-        + cycle over (all partitions of n) x (all selections of k critical classes)
-            + if resulting barcode matches, keep this leaf
+## Examples (try soon)
 
+- delta and CW complex representations of 
+    - the torus
+    - rp2
+    - klein bottle
+    - circle with n edges
 
-# Examples
+## Examples (try later)
 
 - homotopy collapse
 - performance for antitranspose calculation
@@ -60,7 +67,6 @@ cargo run --bin sample_calc --release
 - number of cells in each dimension
 - computation time / memory
 - is it a manifold?
-
 
 ## Paper
 
