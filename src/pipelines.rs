@@ -344,10 +344,15 @@ pub fn analyze_fibre< RingOp, RingElt > (
     println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
     println!("number of facets (binned by number of vertices): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );      
 
+   
+    println!("POLYHEDRAL COMPLEX CELLS"); 
+
     let start = std::time::Instant::now();    
     let poly_complex_bimapsequential    =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
     let duration = start.elapsed();
-    let time_message_poly_faces = format!("Time elapsed to compute the faces of PH fibre (given the facets): {:?}", duration);    
+    let time_message_poly_faces = format!("Time elapsed to compute the faces of PH fibre (given the facets): {:?}", duration);   
+    println!("{:?}", time_message_poly_faces); 
+
     // SQUARE EXAMPLE
     // (old face enumerator) Time elapsed to enumerate polytope faces: 109.550845ms
     // (new face enumerator) Time elapsed to enumerate polytope faces: 24.799084ms
@@ -356,9 +361,8 @@ pub fn analyze_fibre< RingOp, RingElt > (
     // (new face enumerator) Time elapsed to enumerate polytope faces: 605.019797ms
 
     let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
-    let poly_complex_dim_top            =   poly_complex_dims.iter().max().unwrap();    
-    println!("POLYHEDRAL COMPLEX CELLS"); 
-    println!("{:?}", time_message_poly_faces);       
+    let poly_complex_dim_top            =   poly_complex_dims.iter().max().unwrap(); 
+      
     println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
     println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
 
@@ -376,11 +380,16 @@ pub fn analyze_fibre< RingOp, RingElt > (
 
     let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
    
+    let start = std::time::Instant::now();      
     let poly_complex_rank_nullity           =   chain_cx_rank_nullity(
                                                     & poly_complex_differential,
                                                     & poly_complex_dims,
                                                     GF2{}
-                                                );                                                  
+                                                );  
+    let duration = start.elapsed();   
+    println!("Time elapsed to compute binary-coeff polyhedral betti numbers {:?}", duration);                                                
+
+
     let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
     println!("betti numbers (of polyhedral complex, Z2 coefficients): {:?}", &poly_complex_betti_vec);
 
@@ -402,11 +411,17 @@ pub fn analyze_fibre< RingOp, RingElt > (
 
     
     // dowker complex
+    println!("DOWKER NERVE COMPLEX FACETS");       
 
     let dowker_complex_facets               =       dowker_nerve_complex_facets(
                                                         & poly_complex_facets,
                                                         & poly_complex_bimapsequential.val_to_ord
-                                                    );
+                                                    );                                
+                                                     
+    println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facets.len() );
+    println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facets.iter().map(|x| x.len()-1 ) ) );    
+
+    println!("DOWKER NERVE COMPLEX CELLS");   
     
     let dowker_complex_dim_top              =   dowker_complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
 
@@ -419,18 +434,73 @@ pub fn analyze_fibre< RingOp, RingElt > (
     let dowker_complex_bimap_sequential     =   BiMapSequential::from_vec( dowker_complex_simplex_sequence.clone() );
     let dowker_complex_boundary             =   boundary_matrix_from_complex_facets( &dowker_complex_bimap_sequential, ring.clone()); 
 
+    let start = std::time::Instant::now();       
     let dowker_complex_rank_nullity         =   chain_cx_rank_nullity(
                                                     & dowker_complex_boundary,
                                                     & dowker_complex_cell_dims,
                                                       ring.clone()
                                                 );
-
-    println!("DOWKER NERVE COMPLEX FACETS");                                                        
-    println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facets.len() );
-    println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facets.iter().map(|x| x.len()-1 ) ) );    
-
-    println!("DOWKER NERVE COMPLEX CELLS");        
+    let duration = start.elapsed();   
+    println!("Time elapsed to compute nerve dowker dual betti numbers (user specified coeff) {:?}", duration);       
+    
     println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );
     println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
     println!("betti numbers (of dowker nerve, user-specified ring coefficients): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
 }                    
+
+// --------------------------------------------------------------------------------------------- 
+// BASE SPACE
+// simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
+// BARCODE
+// barcode: Barcode { inf: [BarInfinite { dim: 0, birth: 0 }, BarInfinite { dim: 2, birth: 1 }], fin: [], ordinal: BiMapSequential { ord_to_val: [0, 1], val_to_ord: {0: 0, 1: 1} } }
+// TIME TO COMPUTE FIBRE FACETS
+// Time elapsed to compute facets of PH fibre: 11.626907392s
+
+// ANALYSIS
+// Each polytope facet has been checked for compatiblity with the given barcode.
+// POLYHEDRAL COMPLEX FACETS
+// number of facets (total): 1920
+// number of facets (binned by dimension): [0, 0, 0, 0, 0, 0, 1920]
+// number of facets (binned by number of vertices): [0, 0, 0, 0, 0, 0, 1920]
+// POLYHEDRAL COMPLEX CELLS
+// "Time elapsed to compute the faces of PH fibre (given the facets): 604.425412ms"
+// number of polytopes (total): 39566
+// number of polytopes (binned by dimension): [64, 858, 4480, 10860, 13320, 8064, 1920]
+// Time elapsed to compute binary-coeff polyhedral betti numbers 67.473867ms
+// betti numbers (of polyhedral complex, Z2 coefficients): [1, 0, 1, 0, 0, 0, 0]
+// DOWKER NERVE COMPLEX FACETS
+// number of dowker nerve complex facets (total): 1920
+// number of dowker nerve complex facets (binned by dimension): [0, 0, 0, 0, 0, 0, 1920]
+// DOWKER NERVE COMPLEX CELLS
+// Time elapsed to compute nerve dowker dual betti numbers (user specified coeff) 102.759723ms
+// number of nerve dowker complex cells (total): 39566
+// number of nerve dowker complex cells (binned by dimension): [64, 858, 4480, 10860, 13320, 8064, 1920]
+// betti numbers (of dowker nerve, user-specified ring coefficients): [1, 0, 1, 0, 0, 0, 0]
+// --------------------------------------------------------------------------------------------- 
+// BASE SPACE
+// simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3], [0, 1, 2, 3]]
+// BARCODE
+// barcode: Barcode { inf: [BarInfinite { dim: 0, birth: 0 }], fin: [], ordinal: BiMapSequential { ord_to_val: [0], val_to_ord: {0: 0} } }
+// TIME TO COMPUTE FIBRE FACETS
+// Time elapsed to compute facets of PH fibre: 14.152683553s
+
+// ANALYSIS
+// Each polytope facet has been checked for compatiblity with the given barcode.
+// POLYHEDRAL COMPLEX FACETS
+// number of facets (total): 1920
+// number of facets (binned by dimension): [0, 0, 0, 0, 0, 0, 0, 1920]
+// number of facets (binned by number of vertices): [0, 0, 0, 0, 0, 0, 0, 1920]
+// POLYHEDRAL COMPLEX CELLS
+// "Time elapsed to compute the faces of PH fibre (given the facets): 1.086333144s"
+// number of polytopes (total): 79133
+// number of polytopes (binned by dimension): [65, 922, 5338, 15340, 24180, 21384, 9984, 1920]
+// Time elapsed to compute binary-coeff polyhedral betti numbers 85.649335ms
+// betti numbers (of polyhedral complex, Z2 coefficients): [1, 0, 0, 0, 0, 0, 0, 0]
+// DOWKER NERVE COMPLEX FACETS
+// number of dowker nerve complex facets (total): 1920
+// number of dowker nerve complex facets (binned by dimension): [0, 0, 0, 0, 0, 0, 0, 1920]
+// DOWKER NERVE COMPLEX CELLS
+// Time elapsed to compute nerve dowker dual betti numbers (user specified coeff) 158.716406ms
+// number of nerve dowker complex cells (total): 79133
+// number of nerve dowker complex cells (binned by dimension): [65, 922, 5338, 15340, 24180, 21384, 9984, 1920]
+// betti numbers (of dowker nerve, user-specified ring coefficients): [1, 0, 0, 0, 0, 0, 0, 0]

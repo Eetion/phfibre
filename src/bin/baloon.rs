@@ -22,40 +22,13 @@ fn main() {
 
     //  Define the base space, barcode, and ring
 
-    let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
+    let complex_facets      =   vec![  vec![0, 1, 2, 3], vec![3, 4] ];
     let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 2); 
 
     let barcode             =   Barcode{
                                     inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:2,birth:1} ],
                                     fin: vec![ ],
                                     ordinal: ordinate_unique_vals( & vec![ 0, 1 ] ),
-                                };
-
-    let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
-
-    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
-
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
-    );
-
-
-    //  ----------------------------------------------------------------------------------------------    
-    //  3-SKELETON, NO FINITE BARS
-    //  ----------------------------------------------------------------------------------------------
-
-    //  Define the base space, barcode, and ring
-
-    let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 3); 
-
-    let barcode             =   Barcode{
-                                    inf: vec![ BarInfinite{dim:0,birth:0} ],
-                                    fin: vec![ ],
-                                    ordinal: ordinate_unique_vals( & vec![ 0 ] ),
                                 };
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
