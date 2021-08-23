@@ -252,12 +252,12 @@ pub trait ExtraConditionToStartNewLevSet {
 //  NO RESTRICTION
 
 #[derive(Clone, Debug)]
-pub struct NoExtraCondition { }
+pub struct ConditionNone { }
 
 impl 
     ExtraConditionToStartNewLevSet 
     for 
-    NoExtraCondition
+    ConditionNone
 {
     fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool { true }
 }
@@ -268,26 +268,32 @@ impl
 /// Returns false if every cell in the o-skeleton of a simplex S has been assigned a level set, 
 /// but S has not yet been assigned to a level set.
 #[derive(Clone, Debug)]
-pub struct LowerStarCondition<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
+pub struct ConditionLowerStar<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
 
 impl < 'a >
     ExtraConditionToStartNewLevSet 
     for 
-    LowerStarCondition
+    ConditionLowerStar
     < 'a > 
 {
     fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool {
         for ( simplex_index, simplex ) in self.simplex_bimap_sequential.ord_to_val.iter().enumerate() {
-            if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+            if  ( 
+                    ! poly.cell_id_to_has_lev_set( simplex_index ).unwrap()   // simplex has not been assinged to a level set
+                )
                 &&
                 simplex                                             // but all its vertices have
                     .iter()
                     .cloned()                                       
                     .combinations( 1 )
-                    .all(   |x| 
+                    .all(   
+                        |x| 
+                        {
                             poly.cell_id_to_has_lev_set( 
                                 self.simplex_bimap_sequential.ord( &x ).unwrap()                                
-                            ) 
+                            )
+                            .unwrap() 
+                        }
                     ) 
             {
                 return false
@@ -303,36 +309,47 @@ impl < 'a >
 /// Returns false if every cell in the 1-skeleton of a simplex S has been assigned a level set, 
 /// but S has not yet been assigned to a level set.
 #[derive(Clone, Debug)]
-pub struct LowerEdgeCondition<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
+pub struct ConditionLowerEdge<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
 
 impl < 'a >
     ExtraConditionToStartNewLevSet 
     for 
-    LowerEdgeCondition
+    ConditionLowerEdge
     < 'a > 
 {
     fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool {
-        for ( simplex_index, simplex ) in self.simplex_bimap_sequential.ord_to_val.iter().enumerate() {
-            if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+        for ( simplex_index, simplex ) in self.simplex_bimap_sequential.ord_to_val.iter().enumerate() {        
+
+            if  (
+                    ! poly.cell_id_to_has_lev_set( simplex_index ).unwrap()  // simplex has not been assinged to a level set
+                )
                 &&
                 simplex                                         // but all its vertices have
                     .iter() 
                     .cloned()                                         
                     .combinations( 1 )
-                    .all(   |x| 
+                    .all(   
+                        |x| 
+                        {
                             poly.cell_id_to_has_lev_set( 
                                 self.simplex_bimap_sequential.ord( &x ).unwrap()                                
-                            ) 
+                            )
+                            .unwrap()
+                        }
                     ) 
                 &&
                 simplex                                         // but all its edges have, also
                     .iter()
                     .cloned()
                     .combinations( 2 )
-                    .all(   |x| 
+                    .all(   
+                        |x| 
+                        {
                             poly.cell_id_to_has_lev_set( 
                                 self.simplex_bimap_sequential.ord( &x ).unwrap()                                
-                            ) 
+                            )
+                            .unwrap()
+                        }
                     ) 
             {
                 return false
@@ -500,6 +517,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
         //  ---------------------------------------------------------------------
      
         if node.lev_set_sizes.size_last() != Some( 0 )      &&  // current level set is nonempty 
+                node.precondition_to_make_new_lev_set.extra_condition_to_start_new_lev_set( & node.polytope ) && 
                 node.cell_ids_pos_degn.is_empty()           &&  // C-rule (degenerate) there are no unmatched "degenerate" positive cells
                 (                                               // C-rule (critical) 
                     (
@@ -1260,7 +1278,7 @@ mod tests {
         
         let cell_id_to_prereqs  =   None; // no prerequisites for any cell
 
-        let ok_to_start_new_lev_set     =   NoExtraCondition{};
+        let ok_to_start_new_lev_set     =   ConditionNone{};
 
         let root_node           =  Node::make_root(
                                             boundary.clone(),
@@ -1292,5 +1310,59 @@ mod tests {
         assert!(    !   is_barcode_compatible( &root_node, &poly_incorrect    ) );              
     }  
     
+
+    #[test]
+    fn test_extra_conditions_to_start_new_level_set() {
+
+        let simplex_sequence    =   vec![ vec![0], vec![1], vec![2], vec![0, 1], vec![0, 2], vec![1, 2], vec![ 0, 1, 2 ]];
+        let simplex_bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
+
+        let condition_none      =   ConditionNone{};
+        let condition_star      =   ConditionLowerStar{ simplex_bimap_sequential: & simplex_bimap_sequential };
+        let condition_edge      =   ConditionLowerEdge{ simplex_bimap_sequential: & simplex_bimap_sequential };        
+
+        let poly_star_n_edge_n  =   Polytope{
+                                        data_c_to_l:    vec![ 0, 0, 0, 1, 1, 1, 7 ],
+                                        data_l_to_fmin: vec![ 0, 1 ]
+                                    };
+
+        let poly_star_n_edge_y  =   Polytope{
+                                        data_c_to_l:    vec![ 0, 1, 2, 7, 7, 7, 7 ],
+                                        data_l_to_fmin: vec![ 0, 1, 2 ]
+                                    };
+
+        let poly_star_y_edge_y  =   Polytope{
+                                        data_c_to_l:    vec![ 0, 1, 7, 1, 7, 7, 7 ],
+                                        data_l_to_fmin: vec![ 0, 1, ]
+                                    };    
+
+        println!(
+            "{:?} \n{:?}",
+            poly_star_n_edge_n.cell_id_to_has_lev_set( 6 ), 
+            vec![0, 1, 2]                                             // but all its vertices have
+                .iter()
+                .cloned()                                       
+                .combinations( 1 )
+                .all(   |x| 
+                        poly_star_n_edge_n.cell_id_to_has_lev_set( 
+                            simplex_bimap_sequential.ord( &x ).unwrap()                                
+                        )
+                        .unwrap()
+                ) 
+        );
+                                    
+        assert!(        condition_none.extra_condition_to_start_new_lev_set( &poly_star_n_edge_n)   );
+        assert!(        condition_none.extra_condition_to_start_new_lev_set( &poly_star_n_edge_y)   );
+        assert!(        condition_none.extra_condition_to_start_new_lev_set( &poly_star_y_edge_y)   );                
+
+        assert!(    !   condition_star.extra_condition_to_start_new_lev_set( &poly_star_n_edge_n)   );
+        assert!(    !   condition_star.extra_condition_to_start_new_lev_set( &poly_star_n_edge_y)   );
+        assert!(        condition_star.extra_condition_to_start_new_lev_set( &poly_star_y_edge_y)   );                        
+
+        assert!(    !   condition_edge.extra_condition_to_start_new_lev_set( &poly_star_n_edge_n)   );
+        assert!(        condition_edge.extra_condition_to_start_new_lev_set( &poly_star_n_edge_y)   );
+        assert!(        condition_edge.extra_condition_to_start_new_lev_set( &poly_star_y_edge_y)   );                                
+    }
+
   
 }

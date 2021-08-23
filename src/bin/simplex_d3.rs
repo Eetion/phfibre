@@ -7,7 +7,7 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::simplex_pipeline;
-use phfibre::phfibre::{NoExtraCondition, LowerStarCondition, LowerEdgeCondition};
+use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 use std::iter::FromIterator;
@@ -33,7 +33,7 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
-    let precondition_to_make_new_lev_set_lower_none     =   NoExtraCondition{};      // this struct won't impose any extra conditions on the filtrations we build    
+    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
 
     simplex_pipeline(
         &   simplex_sequence,
@@ -43,27 +43,32 @@ fn main() {
     );
 
     //  RESULTS
-    //  -------
-
+    // --------------------------------------------------------------------------------------------- 
     // BASE SPACE
     // simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
+    // BARCODE
+    // barcode: Barcode { inf: [BarInfinite { dim: 0, birth: 0 }, BarInfinite { dim: 2, birth: 1 }], fin: [], ordinal: BiMapSequential { ord_to_val: [0, 1], val_to_ord: {0: 0, 1: 1} } }
+    // TIME TO COMPUTE FIBRE FACETS
+    // Time elapsed to compute facets of PH fibre: 15.599068121s
+    
+    // ANALYSIS
+    // Each polytope facet has been checked for compatiblity with the given barcode.
     // POLYHEDRAL COMPLEX FACETS
     // number of facets (total): 1920
     // number of facets (binned by dimension): [0, 0, 0, 0, 0, 0, 1920]
     // number of facets (binned by number of vertices): [0, 0, 0, 0, 0, 0, 1920]
     // POLYHEDRAL COMPLEX CELLS
+    // "Time elapsed to compute the faces of PH fibre (given the facets): 638.294044ms"
     // number of polytopes (total): 39566
     // number of polytopes (binned by dimension): [64, 858, 4480, 10860, 13320, 8064, 1920]
-    // betti numbers (of polyhedral complex): [1, 0, 1, 0, 0, 0, 0]
-    // INTERSECTIONS
-    // number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [555120, 310848, 139392, 55248, 19152, 5376, 0]
+    // betti numbers (of polyhedral complex, Z2 coefficients): [1, 0, 1, 0, 0, 0, 0]
     // DOWKER NERVE COMPLEX FACETS
     // number of dowker nerve complex facets (total): 1920
     // number of dowker nerve complex facets (binned by dimension): [0, 0, 0, 0, 0, 0, 1920]
     // DOWKER NERVE COMPLEX CELLS
     // number of nerve dowker complex cells (total): 39566
     // number of nerve dowker complex cells (binned by dimension): [64, 858, 4480, 10860, 13320, 8064, 1920]
-    // betti numbers (of dowker nerve): [1, 0, 1, 0, 0, 0, 0]
+    // betti numbers (of dowker nerve, user-specified ring coefficients): [1, 0, 1, 0, 0, 0, 0]
 
 
     //  ----------------------------------------------------------------------------------------------    
@@ -83,7 +88,7 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
-    let precondition_to_make_new_lev_set_lower_none     =   NoExtraCondition{};      // this struct won't impose any extra conditions on the filtrations we build    
+    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
 
     simplex_pipeline(
         &   simplex_sequence,
@@ -93,27 +98,32 @@ fn main() {
     );
 
     //  RESULTS
-    //  -------
-    
+    // --------------------------------------------------------------------------------------------- 
     // BASE SPACE
     // simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3], [0, 1, 2, 3]]
+    // BARCODE
+    // barcode: Barcode { inf: [BarInfinite { dim: 0, birth: 0 }], fin: [], ordinal: BiMapSequential { ord_to_val: [0], val_to_ord: {0: 0} } }
+    // TIME TO COMPUTE FIBRE FACETS
+    // Time elapsed to compute facets of PH fibre: 15.62586721s
+    
+    // ANALYSIS
+    // Each polytope facet has been checked for compatiblity with the given barcode.
     // POLYHEDRAL COMPLEX FACETS
     // number of facets (total): 1920
     // number of facets (binned by dimension): [0, 0, 0, 0, 0, 0, 0, 1920]
     // number of facets (binned by number of vertices): [0, 0, 0, 0, 0, 0, 0, 1920]
     // POLYHEDRAL COMPLEX CELLS
+    // "Time elapsed to compute the faces of PH fibre (given the facets): 1.191708275s"
     // number of polytopes (total): 79133
     // number of polytopes (binned by dimension): [65, 922, 5338, 15340, 24180, 21384, 9984, 1920]
-    // betti numbers (of polyhedral complex): [1, 0, 0, 0, 0, 0, 0, 0]
-    // INTERSECTIONS
-    // number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [757104, 555120, 310848, 139392, 55248, 19152, 5376, 0]
+    // betti numbers (of polyhedral complex, Z2 coefficients): [1, 0, 0, 0, 0, 0, 0, 0]
     // DOWKER NERVE COMPLEX FACETS
     // number of dowker nerve complex facets (total): 1920
     // number of dowker nerve complex facets (binned by dimension): [0, 0, 0, 0, 0, 0, 0, 1920]
     // DOWKER NERVE COMPLEX CELLS
     // number of nerve dowker complex cells (total): 79133
     // number of nerve dowker complex cells (binned by dimension): [65, 922, 5338, 15340, 24180, 21384, 9984, 1920]
-    // betti numbers (of dowker nerve): [1, 0, 0, 0, 0, 0, 0, 0]
+    // betti numbers (of dowker nerve, user-specified ring coefficients): [1, 0, 0, 0, 0, 0, 0, 0]
 
 
 }

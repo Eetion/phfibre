@@ -7,7 +7,7 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::simplex_pipeline;
-use phfibre::phfibre::NoExtraCondition;
+use phfibre::phfibre::ConditionNone;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 
@@ -21,7 +21,7 @@ fn main() {
     //  ----------------------------------------------------------------------------------------------
 
     //  By using the following struct, we impose not "lower-X" conditions
-    let precondition_to_make_new_lev_set     =   NoExtraCondition{};
+    let precondition_to_make_new_lev_set     =   ConditionNone{};
 
 
     //  ----------------------------------------------------------------------------------------------    

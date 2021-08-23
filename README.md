@@ -7,6 +7,8 @@
 
 # How to run
 
+* **IMPORTANT** Functions that take combinatorial simplices (in the form of vectors of inteters) assume that the entries of these vectorsa appear in **sorted order**.
+
 * To run a calculation, you will typically write a program file, save it to the `bin` folder, and then run it via the following command (it is **very important** to include the `--release` at the end; if you exclude it the program will run in debug mode, which is much slower):
 
 ```
@@ -14,19 +16,31 @@ cd path/to/this/repo
 cargo run --bin file_name --release
 ```
 
-* **Example** Try the following for a simplicial complex:
+* **Example** Try the following examples:
+
+The 1-skeleton of the 2-simplex (from paper by Leygonie and Tillmann)
 
 ```
 cd path/to/this/repo
 cargo run --bin B_m_n --release
 ```
 
-and the following for a CW complex:
+A CW complex:
 
 ```
 cd path/to/this/repo
 cargo run --bin T_2 --release
 ```
+
+Lower-star and lower-edge filtrations over the the unit interval, subdivided into 5 1-simplces and 6 0-simplices
+
+```
+cd path/to/this/repo
+cargo run --bin I_m --release
+```
+
+
+
 
 # Notes for the developers
 

@@ -285,7 +285,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
     //  GATHER RESULTS
     //  --------------
 
-    println!("\nNEW COMPUTATION\n--------------------------------------------------------------------------------------------- ");
+    println!("--------------------------------------------------------------------------------------------- ");
 
     println!("BASE SPACE");
     println!("simplices of the base space: {:?}", & simplex_sequence);

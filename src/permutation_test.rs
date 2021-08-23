@@ -1,5 +1,5 @@
 
-use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible, NoExtraCondition};
+use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible, ConditionNone};
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarInfinite, BarFinite, to_ordered_float};
 use crate::polytope::faces::{polys_faces};
 use crate::polytope::object_def::Polytope;
@@ -228,7 +228,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
     let cell_id_to_prereqs  =   None;
 
     //  ADDING A CERTAIN SET OF CELLS DOESN'T "FORCE" THE ADDITION OF ANY OTHER CELLS
-    let precondition_to_make_new_lev_set = NoExtraCondition{};
+    let precondition_to_make_new_lev_set = ConditionNone{};
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
     //  -------------------------------------

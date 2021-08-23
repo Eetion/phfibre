@@ -19,6 +19,24 @@ type Fil = usize;
 type FilRaw = OrderedFloat<f64>; // reason for this choice: f64 does not implement the hash trait (cricital for reparametrizing)
 // type Ring = solar::rings::ring_native::NativeDivisionRing::< Ratio<i64> >;
 
+//  --------------------------------------------------------------------------------
+//  IMPORTANT NOTE: WHY ITERATING OVER PRODUCTS OF PERMUTATIONS IS NOT PREFERRED
+//
+//  It would be tempting to simply iterate over the following:
+//
+//  P = (permutations of 0-cells) x (permutations of 1-cells) x ... x (permutations of top-dim-cells)
+//
+//  For each permutation we could reduce the boundary matrix, get the relevant pairs,
+//  and then use our perfect knowledge of the pivots to (very efficiently) enumerate
+//  all possible groupings that will yield the correct barcode. 
+//
+//  The problem with this approach, as I see it, is that there are massive savings
+//  to be had from pre-emptively excluding infeasible permutations; for example, if
+//  we have, say, a wheel graph, and we want only one d-0 bar, then each vertex has
+//  to be added at the same time as an edge; thus we cut out one of the factors in
+//  the cartesian product P, entirely.
+
+//  --------------------------------------------------------------------------------
 
 
 //  QUOTAS

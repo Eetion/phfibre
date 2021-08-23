@@ -141,7 +141,14 @@ impl Polytope {
     }
 
     /// Determine whether the given cell has been asigned to a level set.
-    pub fn  cell_id_to_has_lev_set( &self, cell_id: usize ) -> bool { cell_id < self.num_cells() }
+    pub fn  cell_id_to_has_lev_set( &self, cell_id: usize ) -> Option< bool > { 
+        let num_cells   =   self.num_cells();
+        if cell_id < num_cells { 
+            Some( self.data_c_to_l[ cell_id ] < num_cells ) 
+        }  else {
+            None
+        }
+    }
 
     /// Ordinal of this cell's level set.
     pub fn  cell_id_to_lev_set_ord( &self, cell_id: usize ) -> Option<usize> { 
