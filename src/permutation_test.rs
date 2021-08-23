@@ -1,5 +1,5 @@
 
-use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
+use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible, NoExtraCondition};
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarInfinite, BarFinite, to_ordered_float};
 use crate::polytope::faces::{polys_faces};
 use crate::polytope::object_def::Polytope;
@@ -216,7 +216,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
-    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());     
+    let boundary            =   boundary_matrix_from_complex_facets(&bimap_sequential, ring.clone());     
 
     
     //  DEFINE THE INVERSE BARCODE
@@ -226,6 +226,9 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 
     //  WE DON'T HAVE TO SPECIFY ANY PREREQUISITES TO ADDING ANY CELL
     let cell_id_to_prereqs  =   None;
+
+    //  ADDING A CERTAIN SET OF CELLS DOESN'T "FORCE" THE ADDITION OF ANY OTHER CELLS
+    let precondition_to_make_new_lev_set = NoExtraCondition{};
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
     //  -------------------------------------
@@ -237,6 +240,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
                         cell_id_to_prereqs,                    
                     &   cell_dims,  
                         ring.clone(),
+                    &   precondition_to_make_new_lev_set,
                         // last_must_be_crit,
                 );
 

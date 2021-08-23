@@ -7,6 +7,7 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::simplex_pipeline;
+use phfibre::phfibre::NoExtraCondition;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 
@@ -14,6 +15,14 @@ use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up
 //  CODE
 
 fn main() {
+
+    //  ----------------------------------------------------------------------------------------------    
+    //  FILTRATION RESTRICTIONS (LOWER-STAR, LOWER-EDGE)
+    //  ----------------------------------------------------------------------------------------------
+
+    //  By using the following struct, we impose not "lower-X" conditions
+    let precondition_to_make_new_lev_set     =   NoExtraCondition{};
+
 
     //  ----------------------------------------------------------------------------------------------    
     //  B_3^1
@@ -37,7 +46,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS
@@ -83,7 +93,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS
@@ -129,7 +140,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS
@@ -175,7 +187,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS
@@ -205,7 +218,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS
@@ -254,7 +268,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set,
     );
 
     //  RESULTS

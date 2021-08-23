@@ -19,6 +19,8 @@ use std::iter::FromIterator;
 use std;
 use std::fmt::Debug;
 use ordered_float::OrderedFloat;
+use auto_impl::auto_impl;
+use itertools::Itertools;
 
 type Cell = usize;
 type Coeff = Ratio< i64 >;
@@ -76,9 +78,10 @@ pub struct CellEntry{
 
 /// Represents a node of the search tree.
 #[derive(Clone, Debug)]
-pub struct Node < 'a, FilRaw, RingOp, RingElt> 
-    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
-            FilRaw:     Ord + Clone + Hash + Debug
+pub struct Node < 'a, FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet> 
+    where   RingOp:             Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            FilRaw:             Ord + Clone + Hash + Debug,
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,
 {
     boundary:               Vec< Vec< ( Cell, RingElt ) > >,  // boundary matrix reprsented as a vector of vectors
     barcode:                &'a Barcode< FilRaw >,          // the target barcode (contains useful ordinal data)
@@ -107,14 +110,19 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt>
     bar_ids_now_fin_brn:    Vec< usize >,                   // bars to be born with this level set
     bar_ids_now_fin_die:    Vec< usize >,                   // bars to be bounded with this level set    
 
+    precondition_to_make_new_lev_set: &'a PreconditionToMakeNewLevSet,
+
     // last_must_be_crit:      bool,                           // a flag to indicate whether the last level set must be critical
 
 }
 
-impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt > 
+impl    < 'a, RingOp, RingElt, FilRaw, PreconditionToMakeNewLevSet > 
+        Node 
+        < 'a, FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet > 
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
             RingElt:    Clone + Debug + PartialOrd,
-            FilRaw:     Ord + Clone + Hash + Debug            
+            FilRaw:     Ord + Clone + Hash + Debug,
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,                    
 {
     /// Generate a root node from boundary data
     pub fn make_root(   
@@ -124,10 +132,11 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
         cell_id_to_prereqs:     Option< &'a Vec< Vec< usize > > >,
         cell_dims:          &   Vec< usize >,   
         ring:                   RingOp,  
+        precondition_to_make_new_lev_set: &'a PreconditionToMakeNewLevSet,
         // last_must_be_crit:      bool,        
     ) 
     -> 
-    Node< 'a, FilRaw, RingOp, RingElt >    
+    Node< 'a, FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >    
     {
 
         let num_cells               =   cell_dims.len();       
@@ -219,6 +228,7 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
             bar_ids_now_inf_brn:    bar_ids_now_inf_brn,
             bar_ids_now_fin_brn:    bar_ids_now_fin_brn,
             bar_ids_now_fin_die:    bar_ids_now_fin_die,
+            precondition_to_make_new_lev_set: precondition_to_make_new_lev_set,
             // last_must_be_crit:      last_must_be_crit,
         }     
     }
@@ -226,6 +236,115 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
 
 
 }
+
+//  ---------------------------------------------------------------------------  
+//  EXTRA CONDITIONS TO IMPOSE ON STARTING A NEW LEVEL SET
+//  ---------------------------------------------------------------------------  
+
+#[auto_impl(&, Box)]
+pub trait ExtraConditionToStartNewLevSet {
+    fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope ) -> bool;
+}
+
+
+
+
+//  NO RESTRICTION
+
+#[derive(Clone, Debug)]
+pub struct NoExtraCondition { }
+
+impl 
+    ExtraConditionToStartNewLevSet 
+    for 
+    NoExtraCondition
+{
+    fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool { true }
+}
+
+
+//  LOWER STAR FILTRATION
+
+/// Returns false if every cell in the o-skeleton of a simplex S has been assigned a level set, 
+/// but S has not yet been assigned to a level set.
+#[derive(Clone, Debug)]
+pub struct LowerStarCondition<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
+
+impl < 'a >
+    ExtraConditionToStartNewLevSet 
+    for 
+    LowerStarCondition
+    < 'a > 
+{
+    fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool {
+        for ( simplex_index, simplex ) in self.simplex_bimap_sequential.ord_to_val.iter().enumerate() {
+            if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+                &&
+                simplex                                             // but all its vertices have
+                    .iter()
+                    .cloned()                                       
+                    .combinations( 1 )
+                    .all(   |x| 
+                            poly.cell_id_to_has_lev_set( 
+                                self.simplex_bimap_sequential.ord( &x ).unwrap()                                
+                            ) 
+                    ) 
+            {
+                return false
+            }
+        }
+        true 
+    }
+}
+
+//  LOWER EDGE FILTRATION
+
+
+/// Returns false if every cell in the 1-skeleton of a simplex S has been assigned a level set, 
+/// but S has not yet been assigned to a level set.
+#[derive(Clone, Debug)]
+pub struct LowerEdgeCondition<'a> { pub simplex_bimap_sequential: &'a BiMapSequential< Vec<usize> > }
+
+impl < 'a >
+    ExtraConditionToStartNewLevSet 
+    for 
+    LowerEdgeCondition
+    < 'a > 
+{
+    fn extra_condition_to_start_new_lev_set( &self, poly: & Polytope) -> bool {
+        for ( simplex_index, simplex ) in self.simplex_bimap_sequential.ord_to_val.iter().enumerate() {
+            if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+                &&
+                simplex                                         // but all its vertices have
+                    .iter() 
+                    .cloned()                                         
+                    .combinations( 1 )
+                    .all(   |x| 
+                            poly.cell_id_to_has_lev_set( 
+                                self.simplex_bimap_sequential.ord( &x ).unwrap()                                
+                            ) 
+                    ) 
+                &&
+                simplex                                         // but all its edges have, also
+                    .iter()
+                    .cloned()
+                    .combinations( 2 )
+                    .all(   |x| 
+                            poly.cell_id_to_has_lev_set( 
+                                self.simplex_bimap_sequential.ord( &x ).unwrap()                                
+                            ) 
+                    ) 
+            {
+                return false
+            }
+        }
+        true  // return true if no violations have been found
+    }
+}
+
+
+
+
 
 //  ---------------------------------------------------------------------------  
 //  SEED DATA
@@ -275,13 +394,14 @@ impl < 'a, RingOp, RingElt, FilRaw > Node < 'a, FilRaw, RingOp, RingElt >
 //  ---------------------------------------------------------------------------  
 
 
-pub fn  explore< FilRaw, RingOp, RingElt >( 
-        node:       &       Node < FilRaw, RingOp, RingElt >, 
+pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >( 
+        node:       &       Node < FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >, 
         results:    &mut    Vec < Polytope > 
     )
-    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
-            RingElt:    Clone + Debug + PartialOrd,
-            FilRaw:     Clone + Debug + Ord + Hash
+    where   RingOp:                     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:                    Clone + Debug + PartialOrd,
+            FilRaw:                     Clone + Debug + Ord + Hash,
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,
 { 
 
 
@@ -379,11 +499,11 @@ pub fn  explore< FilRaw, RingOp, RingElt >(
         //  IF FEASIBLE, INITIALIZE NEW LEVEL SET 
         //  ---------------------------------------------------------------------
      
-        if node.lev_set_sizes.size_last() != Some( 0 ) &&  // current level set is nonempty 
-                node.cell_ids_pos_degn.is_empty()       &&      // C-rule (degenerate) there are no unmatched "degenerate" positive cells
+        if node.lev_set_sizes.size_last() != Some( 0 )      &&  // current level set is nonempty 
+                node.cell_ids_pos_degn.is_empty()           &&  // C-rule (degenerate) there are no unmatched "degenerate" positive cells
                 (                                               // C-rule (critical) 
                     (
-                    !node.polytope                           // the level set contains no "critical" cell
+                    !node.polytope                                  // the level set contains no "critical" cell
                             .lev_set_last_is_critical()
                             .unwrap() 
                     )                          
@@ -983,15 +1103,16 @@ pub fn  explore< FilRaw, RingOp, RingElt >(
 //  ---------------------------------------------------------------------------  
 
 
-pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt >( 
-            root_node:  &   Node< FilRaw, RingOp, RingElt >, 
+pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >( 
+            root_node:  &   Node< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >, 
             result:     &   Polytope
         )
         ->
         bool
-    where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
-            RingElt:    Clone + Debug + PartialOrd + Ord,
-            FilRaw:     Clone + Debug + Ord + Hash        
+    where   RingOp:                     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
+            RingElt:                    Clone + Debug + PartialOrd + Ord,
+            FilRaw:                     Clone + Debug + Ord + Hash,
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,
 {
 
     let num_cells               =   root_node.cells_all.len();
@@ -1090,13 +1211,14 @@ pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt >(
 }   
 
 
-pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt >( 
-            root_node:  &   Node< FilRaw, RingOp, RingElt >, 
+pub fn  verify_that_barcode_is_compatible< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >( 
+            root_node:  &   Node< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >, 
             result:     &   Polytope
         )
     where   RingOp:     Clone + Semiring<RingElt> + Ring<RingElt> + DivisionRing<RingElt>,
             RingElt:    Clone + Debug + PartialOrd + Ord,
-            FilRaw:     Clone + Debug + Ord + Hash  
+            FilRaw:     Clone + Debug + Ord + Hash,
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,
 
 {
     assert!( is_barcode_compatible( root_node, result ) );
@@ -1126,7 +1248,7 @@ mod tests {
         let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
     
         let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence );
-        let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone());
+        let boundary            =   boundary_matrix_from_complex_facets( &bimap_sequential, ring.clone());
         
         let barcode             =   Barcode{
                                         inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:3} ],
@@ -1138,13 +1260,16 @@ mod tests {
         
         let cell_id_to_prereqs  =   None; // no prerequisites for any cell
 
+        let ok_to_start_new_lev_set     =   NoExtraCondition{};
+
         let root_node           =  Node::make_root(
                                             boundary.clone(),
                                         &   barcode,
                                         &   barcode_inverse,
                                             cell_id_to_prereqs,
                                         &   cell_dims,  
-                                            ring.clone()
+                                            ring.clone(),
+                                        &   ok_to_start_new_lev_set,
                                             // last_must_be_crit,
                                     );
 

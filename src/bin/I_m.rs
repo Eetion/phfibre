@@ -7,7 +7,8 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::simplex_pipeline;
-use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
+use phfibre::phfibre::{NoExtraCondition, LowerStarCondition, LowerEdgeCondition};
+use solar::utilities::sequences_and_ordinals::{ordinate_unique_vals, BiMapSequential};
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 use std::iter::FromIterator;
 
@@ -15,9 +16,9 @@ use std::iter::FromIterator;
 
 fn main() {
 
-    //  ----------------------------------------------------------------------------------------------    
+    //  -------------------------------------------------------------------------------------------    
     //  5-VERTEX INTERVAL WITH NO FINITE BARS
-    //  ----------------------------------------------------------------------------------------------
+    //  -------------------------------------------------------------------------------------------
 
 
     //  Define the base space, barcode, and ring
@@ -35,10 +36,22 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    let simplex_bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
+
+    //  Define any extra conditions on starting a new level set
+
+    let precondition_to_make_new_lev_set_lower_none     =   NoExtraCondition{};        
+    let precondition_to_make_new_lev_set_lower_star     =   LowerStarCondition{ simplex_bimap_sequential: & simplex_bimap_sequential };
+    let precondition_to_make_new_lev_set_lower_edge     =   LowerEdgeCondition{ simplex_bimap_sequential: & simplex_bimap_sequential };    
+
+    //  UNCONSTRAINED FILTRATION
+    //  -------------------------------------------------------------------------------------------
+
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none,
     );
 
     //  RESULTS
@@ -60,6 +73,26 @@ fn main() {
     // number of nerve dowker complex cells (total): 791
     // number of nerve dowker complex cells (binned by dimension): [21, 105, 231, 258, 144, 32]
     // betti numbers (of dowker nerve): [1, 0, 0, 0, 0, 0]  
+
+    //  LOWER STAR
+    //  -------------------------------------------------------------------------------------------
+
+    simplex_pipeline(
+        &   simplex_sequence,
+        &   barcode,
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_star,
+    );    
+
+    //  LOWER EDGE
+    //  -------------------------------------------------------------------------------------------
+
+    simplex_pipeline(
+        &   simplex_sequence,
+        &   barcode,
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_edge,
+    );        
 
     
 
@@ -86,7 +119,8 @@ fn main() {
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none
     );
 
     //  RESULTS

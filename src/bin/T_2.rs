@@ -7,6 +7,7 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::boundary_matrix_pipeline;
+use phfibre::phfibre::NoExtraCondition;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 use solar::rings::ring::{Ring, Semiring};
@@ -66,6 +67,9 @@ fn main() {
                                     ordinal: ordinate_unique_vals( & vec![0, 1, 2, 3] ),
                                 };
 
+    //  EXTRA CONDITIONS ON THE FILTRATIONS WE BUILD
+    let precondition_to_make_new_lev_set_lower_none     =   NoExtraCondition{};
+
     //  ANALYZE
 
     println!("");    
@@ -76,6 +80,7 @@ fn main() {
         & cell_dims,
         & barcode,
         & ring,
+        & precondition_to_make_new_lev_set_lower_none,
     );
 
     //  RESULTS
@@ -149,6 +154,7 @@ fn main() {
         & cell_dims,
         & barcode,
         & ring,
+        & precondition_to_make_new_lev_set_lower_none,
     );
 
     //  RESULTS

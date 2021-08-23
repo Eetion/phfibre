@@ -7,6 +7,7 @@
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::simplex_pipeline;
+use phfibre::phfibre::{NoExtraCondition, LowerStarCondition, LowerEdgeCondition};
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 
@@ -30,10 +31,13 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
+    let precondition_to_make_new_lev_set_lower_none     =   NoExtraCondition{};      // this struct won't impose any extra conditions on the filtrations we build    
+
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
-        &   ring
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none,
     );
 
     //  RESULTS

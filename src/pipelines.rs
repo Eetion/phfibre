@@ -1,5 +1,5 @@
 
-use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible};
+use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible, ExtraConditionToStartNewLevSet};
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse };
 use crate::polytope::object_def::Polytope;
 use crate::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
@@ -13,9 +13,12 @@ use solar::cell_complexes::simplices_unweighted::facets::{ ordered_subsimplices_
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{boundary_matrix_from_complex_facets};   
 use solar::rings::field_prime::GF2;
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
+use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::fmt::Debug;
 use std::hash::Hash;
+
+use itertools::Itertools;
 
 use ordered_float::OrderedFloat;
 
@@ -50,16 +53,18 @@ type F  =   num::rational::Ratio<i64>;
 /// The boundary matrix is stored in column-major vec-of-vec format.  Entries in each column should
 /// appear in sorted order, according to row index.  The homological degree of
 /// each basis vector (i.e. chain) is recorded in `cell_dims`.
-pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
+pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             boundary:               &   Vec< Vec< ( usize, RingElt ) > >,
             cell_id_to_prereqs:         Option< & Vec< Vec< usize > > >,
             cell_dims:              &   Vec< usize >,            
             barcode:                &   Barcode< FilRaw >,
-            ring:                   &   RingOp,            
+            ring:                   &   RingOp,           
+            precondition_to_make_new_lev_set:   &PreconditionToMakeNewLevSet, 
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
-            FilRaw:     Clone + Debug + Ord + Hash,  
+            FilRaw:     Clone + Debug + Ord + Hash, 
+            PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug, 
 {
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
     let root =  Node::make_root(
@@ -69,6 +74,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
                         cell_id_to_prereqs,
                     &   cell_dims,  
                         ring.clone(),
+                        precondition_to_make_new_lev_set,
                 );
 
     let mut poly_complex_facets     =   Vec::new();                                
@@ -114,27 +120,114 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt >(
 //  SIMPLEX PIPELINE
 //  --------------------------------------------------------------------------------------------
 
+//  -------------------------------------------------------------------
+//  BEGIN:  THIS COMMENTED SECTION CAN BE DELETED; THE FUNCTION DEFS HAVE BEEN MOVED TO STRUCTS IN phfibre.rs 
+
+// /// Determine whether all vertices in the 0-skeleton of a simplex have been assigned to level sets.
+// /// 
+// /// # Arguments
+// /// 
+// /// * poly: a polytope
+// /// * simplex_bimap_sequential: assigns a unique id number to each simplex
+// /// * simplex: the simplex in question
+// pub fn  skel_0_added(
+//             poly:                       & Polytope,
+//             simplex_bimap_sequential:   & BiMapSequential< Vec< usize > >,
+//             simplex:                    & Vec< usize >,
+//         )
+//         ->  
+//         bool 
+// {
+//     for ( simplex_index, simplex ) in simplex_bimap_sequential.ord_to_val.iter().enumerate() {
+//         if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+//             &&
+//             simplex                                             // but all its vertices have
+//                 .iter()
+//                 .cloned()                                       
+//                 .combinations( 1 )
+//                 .all(   |x| 
+//                         poly.cell_id_to_has_lev_set( 
+//                             simplex_bimap_sequential.ord( &x ).unwrap()                                
+//                         ) 
+//                 ) 
+//         {
+//             return false
+//         }
+//     }
+//     true 
+// }
+
+// /// Determine whether all vertices AND edges in the 1-skeleton of a simplex have been assigned to level sets.
+// /// 
+// /// # Arguments
+// /// 
+// /// * poly: a polytope
+// /// * simplex_bimap_sequential: assigns a unique id number to each simplex
+// /// * simplex: the simplex in question
+// pub fn  skel_1_added(
+//             poly:                       & Polytope,
+//             simplex_bimap_sequential:   & BiMapSequential< Vec< usize > >,
+//             simplex:                    & Vec< usize >,
+//         )
+//         ->  
+//         bool 
+// {
+//     for ( simplex_index, simplex ) in simplex_bimap_sequential.ord_to_val.iter().enumerate() {
+//         if  ! poly.cell_id_to_has_lev_set( simplex_index )  // simplex has not been assinged to a level set
+//             &&
+//             simplex                                         // but all its vertices have
+//                 .iter() 
+//                 .cloned()                                         
+//                 .combinations( 1 )
+//                 .all(   |x| 
+//                         poly.cell_id_to_has_lev_set( 
+//                             simplex_bimap_sequential.ord( &x ).unwrap()                                
+//                         ) 
+//                 ) 
+//             &&
+//             simplex                                         // but all its edges have, also
+//                 .iter()
+//                 .cloned()
+//                 .combinations( 2 )
+//                 .all(   |x| 
+//                         poly.cell_id_to_has_lev_set( 
+//                             simplex_bimap_sequential.ord( &x ).unwrap()                                
+//                         ) 
+//                 ) 
+//         {
+//             return false
+//         }
+//     }
+//     true  // return true if no violations have been found
+// }
+//  END:  THIS COMMENTED SECTION CAN BE DELETED; THE FUNCTION DEFS HAVE BEEN MOVED TO STRUCTS IN phfibre.rs 
+//  -------------------------------------------------------------------
+
+
 
 
 /// Compute the PH fibre of a given barcode for a given simplicial complex over a given ring.
 /// 
 /// The `simplex_sequence` parameter should include all simplices in the complex.
-pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
+pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             simplex_sequence:       &   Vec< Vec< usize > >,
             barcode:                &   Barcode< FilRaw >,
-            ring:                   &   RingOp,            
+            ring:                   &   RingOp,     
+            precondition_to_make_new_lev_set:   &   PreconditionToMakeNewLevSet,
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
-            FilRaw:     Clone + Debug + Ord + Hash,  
+            FilRaw:     Clone + Debug + Ord + Hash, 
+            PreconditionToMakeNewLevSet: ExtraConditionToStartNewLevSet + Clone + Debug, 
 {
+
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
 
     let cell_dims: Vec<_>   =   simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
     let bimap_sequential    =   BiMapSequential::from_vec( simplex_sequence.clone() );
-    let boundary            =   boundary_matrix_from_complex_facets(bimap_sequential, ring.clone()); 
+    let boundary            =   boundary_matrix_from_complex_facets( &bimap_sequential, ring.clone()); 
 
 
     //  DEFINE THE BARCODE + INVERSE BARCODE
@@ -143,10 +236,35 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
     let barcode_inverse     =   BarcodeInverse::from_barcode( & barcode );
             
 
-    //  NO PREREQUISITES HAVE TO BE SPECIFIED FOR ANY SIMPLEX
+    //  NO CELL HAS TO SATISFY A SPECIAL REQUIREMENT TO BE ADDED (ONLY "VANILLA" REQUIREMENTS)
     //  -----------------------------------------------------------------
 
     let cell_id_to_prereqs  =   None;
+
+    //  FILTRATION CONSTRAINTS  <---- THIS SECTION SHOULD BE DEPRECATED NOW; PROBABLY OK TO DELETE
+    //  ----------------------
+
+    // // Panic if an invalid choice is given
+    // if ! vec!["lower_star", "lower_edge", "none"].contains( &&filtration_constraints ) {
+    //     panic!("Argument `filtration_constraints` must be \"lower_star\", \"lower_edge\", or \"none\"");
+    // }
+
+    // //  The vacuous default constraint that will be use if we don't use lower_star or lower_edge 
+    // let precondition_to_make_new_lev_set    =               | poly: Polytope | -> bool { true } ;
+
+    // if filtration_constraints == "lower_star" { 
+    //     let precondition_to_make_new_lev_set    = | poly: Polytope | -> bool 
+    //         { 
+    //             return simplex_sequence.iter().all( |x| skel_0_added(&poly, &bimap_sequential, x) )
+    //         };  
+    // }
+
+    // if filtration_constraints == "lower_edge" { 
+    //     let precondition_to_make_new_lev_set    = | poly: Polytope | -> bool 
+    //         { 
+    //             return simplex_sequence.iter().all( |x| skel_1_added(&poly, &bimap_sequential, x) )
+    //         };  
+    // }    
 
 
     //  DEFINE THE ROOT NODE + RESULTS VECTOR
@@ -159,6 +277,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt >(
                         cell_id_to_prereqs,
                     &   cell_dims,  
                         ring.clone(),
+                        precondition_to_make_new_lev_set,
                 );
 
     let mut poly_complex_facets     =   Vec::new();                                
@@ -228,7 +347,7 @@ pub fn analyze_fibre< RingOp, RingElt > (
     let start = std::time::Instant::now();    
     let poly_complex_bimapsequential    =   poly_complex_facets_to_whole_complex_bimapsequential( & poly_complex_facets );
     let duration = start.elapsed();
-    let time_message_poly_faces = format!("Time elapsed to compute facets of PH fibre: {:?}", duration);    
+    let time_message_poly_faces = format!("Time elapsed to compute the faces of PH fibre (given the facets): {:?}", duration);    
     // SQUARE EXAMPLE
     // (old face enumerator) Time elapsed to enumerate polytope faces: 109.550845ms
     // (new face enumerator) Time elapsed to enumerate polytope faces: 24.799084ms
@@ -298,7 +417,7 @@ pub fn analyze_fibre< RingOp, RingElt > (
     let dowker_complex_cell_dims: Vec<_>    =   dowker_complex_simplex_sequence.iter().map(|x| x.len()-1 ).collect();
 
     let dowker_complex_bimap_sequential     =   BiMapSequential::from_vec( dowker_complex_simplex_sequence.clone() );
-    let dowker_complex_boundary             =   boundary_matrix_from_complex_facets(dowker_complex_bimap_sequential, ring.clone()); 
+    let dowker_complex_boundary             =   boundary_matrix_from_complex_facets( &dowker_complex_bimap_sequential, ring.clone()); 
 
     let dowker_complex_rank_nullity         =   chain_cx_rank_nullity(
                                                     & dowker_complex_boundary,
