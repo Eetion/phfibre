@@ -37,6 +37,7 @@ fn main() {
 
     let analyze_dowker_dual =   true;
 
+    println!("\n\n2-SKELETON, NO FINITE BARS");
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
@@ -47,9 +48,37 @@ fn main() {
 
 
     //  ----------------------------------------------------------------------------------------------    
-    //  3-SKELETON, NO FINITE BARS
+    //  2-SKELETON, 1 FINITE BAR IN DIM 0, 1 FINITE BAR IN DIM 1
     //  ----------------------------------------------------------------------------------------------
 
+    //  Define the base space, barcode, and ring
+
+    let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 2); 
+
+    let barcode             =   Barcode{
+                                    inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:2,birth:5} ],
+                                    fin: vec![ BarFinite{dim:0,birth:1,death:2}, BarFinite{dim:1,birth:3,death:4} ],
+                                    ordinal: ordinate_unique_vals( & vec![ 0, 1, 2, 3, 4, 5 ] ),
+                                };
+
+    let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
+
+    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
+
+    println!("\n\n2-SKELETON, BARCODE:(0, [0,INF)), (0, [1,2)), (1, [3,4)), (2, [5,INF))");
+    simplex_pipeline(
+        &   simplex_sequence,
+        &   barcode,
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none,
+            false, // do not analyze the dowker dual to the nerve complex
+    );
+
+    //  ----------------------------------------------------------------------------------------------    
+    //  3-SKELETON, NO FINITE BARS
+    //  ----------------------------------------------------------------------------------------------   
+    
     //  Define the base space, barcode, and ring
 
     let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
@@ -65,13 +94,16 @@ fn main() {
 
     let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
 
+    let analyze_dowker_dual =   true;
+
+    println!("\n\n3-SKELETON, NO FINITE BARS");
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+    );    
 
 }
 
