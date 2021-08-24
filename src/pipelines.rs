@@ -60,6 +60,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
             barcode:                &   Barcode< FilRaw >,
             ring:                   &   RingOp,           
             precondition_to_make_new_lev_set:   &PreconditionToMakeNewLevSet, 
+            analyze_dowker_dual:        bool,
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
@@ -111,6 +112,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
+            analyze_dowker_dual,
     );
         
 }
@@ -214,6 +216,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
             barcode:                &   Barcode< FilRaw >,
             ring:                   &   RingOp,     
             precondition_to_make_new_lev_set:   &   PreconditionToMakeNewLevSet,
+            analyze_dowker_dual:        bool,
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
@@ -314,6 +317,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
+            analyze_dowker_dual,
     );
     
 }                    
@@ -331,7 +335,8 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
 
 pub fn analyze_fibre< RingOp, RingElt > (
             poly_complex_facets:    &   Vec< Polytope >, 
-            ring:                       RingOp,            
+            ring:                       RingOp, 
+            analyze_dowker_dual:        bool,           
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
@@ -411,41 +416,44 @@ pub fn analyze_fibre< RingOp, RingElt > (
 
     
     // dowker complex
-    println!("DOWKER NERVE COMPLEX FACETS");       
+    if analyze_dowker_dual {
+        println!("DOWKER NERVE COMPLEX FACETS");       
 
-    let dowker_complex_facets               =       dowker_nerve_complex_facets(
-                                                        & poly_complex_facets,
-                                                        & poly_complex_bimapsequential.val_to_ord
-                                                    );                                
-                                                     
-    println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facets.len() );
-    println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facets.iter().map(|x| x.len()-1 ) ) );    
+        let dowker_complex_facets               =       dowker_nerve_complex_facets(
+                                                            & poly_complex_facets,
+                                                            & poly_complex_bimapsequential.val_to_ord
+                                                        );                                
+                                                        
+        println!("number of dowker nerve complex facets (total): {:?}", dowker_complex_facets.len() );
+        println!("number of dowker nerve complex facets (binned by dimension): {:?}", histogram( dowker_complex_facets.iter().map(|x| x.len()-1 ) ) );    
 
-    println!("DOWKER NERVE COMPLEX CELLS");   
+        println!("DOWKER NERVE COMPLEX CELLS");   
+        
+        let dowker_complex_dim_top              =   dowker_complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
+
+        let dowker_complex_simplex_sequence     =   ordered_subsimplices_up_thru_dim_concatenated_vec( 
+                                                        & dowker_complex_facets, 
+                                                        dowker_complex_dim_top
+                                                    );    
+        let dowker_complex_cell_dims: Vec<_>    =   dowker_complex_simplex_sequence.iter().map(|x| x.len()-1 ).collect();
+
+        let dowker_complex_bimap_sequential     =   BiMapSequential::from_vec( dowker_complex_simplex_sequence.clone() );
+        let dowker_complex_boundary             =   boundary_matrix_from_complex_facets( &dowker_complex_bimap_sequential, ring.clone()); 
+
+        let start = std::time::Instant::now();       
+        let dowker_complex_rank_nullity         =   chain_cx_rank_nullity(
+                                                        & dowker_complex_boundary,
+                                                        & dowker_complex_cell_dims,
+                                                        ring.clone()
+                                                    );
+        let duration = start.elapsed();   
+        println!("Time elapsed to compute nerve dowker dual betti numbers (user specified coeff) {:?}", duration);       
+        
+        println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );
+        println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
+        println!("betti numbers (of dowker nerve, user-specified ring coefficients): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
+    }
     
-    let dowker_complex_dim_top              =   dowker_complex_facets.iter().map(|x| x.len()-1 ).max().unwrap();
-
-    let dowker_complex_simplex_sequence     =   ordered_subsimplices_up_thru_dim_concatenated_vec( 
-                                                    & dowker_complex_facets, 
-                                                      dowker_complex_dim_top
-                                                );    
-    let dowker_complex_cell_dims: Vec<_>    =   dowker_complex_simplex_sequence.iter().map(|x| x.len()-1 ).collect();
-
-    let dowker_complex_bimap_sequential     =   BiMapSequential::from_vec( dowker_complex_simplex_sequence.clone() );
-    let dowker_complex_boundary             =   boundary_matrix_from_complex_facets( &dowker_complex_bimap_sequential, ring.clone()); 
-
-    let start = std::time::Instant::now();       
-    let dowker_complex_rank_nullity         =   chain_cx_rank_nullity(
-                                                    & dowker_complex_boundary,
-                                                    & dowker_complex_cell_dims,
-                                                      ring.clone()
-                                                );
-    let duration = start.elapsed();   
-    println!("Time elapsed to compute nerve dowker dual betti numbers (user specified coeff) {:?}", duration);       
-    
-    println!("number of nerve dowker complex cells (total): {:?}", dowker_complex_cell_dims.len() );
-    println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
-    println!("betti numbers (of dowker nerve, user-specified ring coefficients): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
 }                    
 
 // --------------------------------------------------------------------------------------------- 

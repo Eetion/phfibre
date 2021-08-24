@@ -47,6 +47,8 @@ fn main() {
     let precondition_to_make_new_lev_set_lower_star     =   ConditionLowerStar{ simplex_bimap_sequential: & simplex_bimap_sequential };
     let precondition_to_make_new_lev_set_lower_edge     =   ConditionLowerEdge{ simplex_bimap_sequential: & simplex_bimap_sequential };    
 
+    //  This example is small enough to allow analysis of the nerve
+    let analyze_dowker_dual                             =   true;
 
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
@@ -57,6 +59,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
+            analyze_dowker_dual,
     );
 
     //  LOWER EDGE
@@ -68,6 +71,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_edge,
+            analyze_dowker_dual,        
     ); 
 
     //  LOWER STAR
@@ -79,6 +83,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_star,
+            analyze_dowker_dual,
     );    
 
     
@@ -113,7 +118,8 @@ fn main() {
         &   simplex_sequence,
         &   barcode,
         &   ring,
-        &   precondition_to_make_new_lev_set_lower_none
+        &   precondition_to_make_new_lev_set_lower_none,
+            analyze_dowker_dual,
     );
 
     //  LOWER EDGE
@@ -125,6 +131,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_edge,
+            analyze_dowker_dual,
     );     
 
     //  LOWER STAR
@@ -136,6 +143,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_star,
+            analyze_dowker_dual,
     );      
 
 

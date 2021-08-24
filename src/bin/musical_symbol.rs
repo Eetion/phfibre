@@ -35,12 +35,14 @@ fn main() {
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new(); // this just defines the rational numbers
 
     let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
+    let analyze_dowker_dual =   true;
 
     simplex_pipeline(
         &   simplex_sequence,
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
+            analyze_dowker_dual,
     );
 
     //  RESULTS

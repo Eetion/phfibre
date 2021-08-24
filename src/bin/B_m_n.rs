@@ -21,7 +21,8 @@ fn main() {
     //  ----------------------------------------------------------------------------------------------
 
     //  By using the following struct, we impose not "lower-X" conditions
-    let precondition_to_make_new_lev_set     =   ConditionNone{};
+    let precondition_to_make_new_lev_set    =   ConditionNone{};
+    let analyze_dowker_dual                 =   true;
 
 
     //  ----------------------------------------------------------------------------------------------    
@@ -48,6 +49,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -95,6 +97,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -142,6 +145,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -189,6 +193,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -220,6 +225,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -270,6 +276,7 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set,
+            analyze_dowker_dual,
     );
 
     //  RESULTS

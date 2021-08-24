@@ -70,17 +70,21 @@ fn main() {
     //  EXTRA CONDITIONS ON THE FILTRATIONS WE BUILD
     let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};
 
+    //  CONFIRM THAT WE WILL ANALYZE THE DUAL DOWKER COMPLEX TO THE NERVE
+    let analyze_dowker_dual =   true;
+
     //  ANALYZE
 
     println!("");    
     println!("T2 (six cells):");        
     boundary_matrix_pipeline(
-        & boundary,
+        &   boundary,
         Some( & cell_id_to_prereqs ),
-        & cell_dims,
-        & barcode,
-        & ring,
-        & precondition_to_make_new_lev_set_lower_none,
+        &   cell_dims,
+        &   barcode,
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
@@ -149,12 +153,13 @@ fn main() {
     println!("");    
     println!("T2 (four cells):");        
     boundary_matrix_pipeline(
-        & boundary,
+        &   boundary,
         Some( & cell_id_to_prereqs ),
-        & cell_dims,
-        & barcode,
-        & ring,
-        & precondition_to_make_new_lev_set_lower_none,
+        &   cell_dims,
+        &   barcode,
+        &   ring,
+        &   precondition_to_make_new_lev_set_lower_none,
+            analyze_dowker_dual,
     );
 
     //  RESULTS
