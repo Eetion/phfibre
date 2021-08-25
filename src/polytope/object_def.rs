@@ -414,7 +414,99 @@ impl Polytope {
         }
 
         return true
-    }    
+    }  
+    
+    
+
+    /// Given a partially-built polytope `othr` (meaning that `othr.cell_id_to_lev_set_ord` contains some
+    /// values equal to the number of cells in the complex, implying that these `cell_id`s have not been
+    /// assigned to a level set), certify that `othr` has been previously explored as a possibility in 
+    /// the normal course of the phfibre algorithm
+    pub fn  certifies_prior_exploration( &self, othr: & Polytope ) -> bool {
+
+        let num_cells       =   self.num_cells();
+        
+        // polytopes must have the same number of cells and the same number of fmin values
+        if  num_cells != othr.num_cells() 
+        { return false }
+
+
+        // create a mask that makes some elements of the last level set of othr appear to be 
+        // unassigned, but returns proper level set assignment for all other cells
+        let othr_lev_set_last               =   othr.num_lev_sets() - 1;
+        let min_touched_lev_set_self_opt    =   ( 0 .. num_cells )
+                                                    .filter( |x| othr.cell_id_to_lev_set_ord( *x ).unwrap() == othr_lev_set_last )
+                                                    .map( |x| self.cell_id_to_lev_set_ord( x ).unwrap() )
+                                                    .min();
+        
+        // can't use this trick if the level set currently being built in othr is critical
+        //  ???? OR MAYBE YOU CAN???
+        // if let Some( min_touched_lev_set_self_inner ) = min_touched_lev_set_self_opt { 
+        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self_inner ).unwrap() {
+        //         return false
+        //     } 
+        // }       
+        // CAN'T GET A CERTIFICATE IF TOO SIMILAR
+        // if  min_touched_lev_set_self_opt == Some( othr_lev_set_last ) 
+        //     && 
+        //     self.data_c_to_l.iter().filter(|x| self.cell_id_to_lev_set_ord(**x) == min_touched_lev_set_self_opt).count()
+        //     == 
+        //     othr.data_c_to_l.iter().filter(|x| othr.cell_id_to_lev_set_ord(**x) == min_touched_lev_set_self_opt).count()
+        //     { return false }
+        
+
+        // let min_touched_lev_set_self    =   
+
+        // if let Some( min_touched_lev_set_self_inner ) = min_touched_lev_set_self_opt { 
+        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self_inner ).unwrap() {
+        //         return false
+        //     } 
+        //     else {
+        //         min_touched_lev_set_self_inner                
+        //     }
+        // };
+
+        let mask = | cell_id: usize | -> usize { 
+            if  othr.cell_id_to_lev_set_ord( cell_id ) == Some( othr_lev_set_last )  
+                &&
+                self.cell_id_to_lev_set_ord( cell_id ) != min_touched_lev_set_self_opt
+            { return num_cells.clone() }
+            else { return othr.cell_id_to_lev_set_ord( cell_id ).unwrap() }
+        };
+
+        // the bounds for each cell must be respected
+        for cell_id in 0 .. num_cells {
+            if  othr.cell_id_to_lev_set_ord( cell_id ).unwrap() < num_cells
+                &&
+                (
+                    othr.cell_id_to_fmin( cell_id )   <   self.cell_id_to_fmin( cell_id )
+                    ||
+                    othr.cell_id_to_fmax( cell_id )   >   self.cell_id_to_fmax( cell_id )
+                )
+
+            { return false }                
+        }
+        
+        for cell_id_a in 0 .. self.num_cells() {
+            
+            for cell_id_b in 0 .. self.num_cells() {
+                // let "pull back" refer to the pull back preorder on cells induced by the mapping of cells to level set; 
+                // this is a binary relation on the set of cells.  the "pull back" for other should be a superset of the 
+                // "pull back" for self
+                if  (
+                        self.cell_id_to_lev_set_ord( cell_id_a )    >=  self.cell_id_to_lev_set_ord( cell_id_b )     
+                    )
+                    &&
+                    ! (
+                        mask( cell_id_a )    >=  mask( cell_id_b )
+                    )
+                    
+                { return false }
+            }
+        }
+
+        return true
+    }      
 
 }
 
@@ -758,6 +850,56 @@ mod tests {
         assert!(    poly_a.contains_extension( &poly_b ) );
         assert!(    poly_a.contains_extension( &poly_c ) );    
         assert!( !  poly_a.contains_extension( &poly_d ) );                
+    }
+
+
+    #[test]
+    fn test_certifies_prior_exploration() {
+        let poly_a              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1,1,2],
+                                        data_c_to_l:        vec![0,1,2,3],
+                                    };        
+        let poly_b              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1,2],
+                                        data_c_to_l:        vec![0,1,1,2],
+                                    };                                
+        let poly_c              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1],
+                                        data_c_to_l:        vec![0,1,1,4],
+                                    };    
+        let poly_d              =   Polytope { 
+                                        data_l_to_fmin:     vec![0,1],
+                                        data_c_to_l:        vec![0,0,1,4],
+                                    };       
+                                    
+        
+        // This test should return true wherever contains_extension returns true
+        assert!(    poly_a.certifies_prior_exploration( &poly_b ) );
+        assert!(    poly_a.certifies_prior_exploration( &poly_c ) );    
+
+        // It should return false where there are disagreements about min/max
+        // possible filtraiton values
+        assert!( !  poly_a.certifies_prior_exploration( &poly_d ) );  
+        
+        // These tests, however, are unique to <certifies_prior_exploration>
+        let poly_aa             =   Polytope{
+                                        data_l_to_fmin:     vec![0,0,1,1],
+                                        data_c_to_l:        vec![0,0,1,1,2,2,3,3,4,4],
+                                    };
+
+        let poly_bb             =   Polytope{
+                                        data_l_to_fmin:     vec![0,0,1,1],
+                                        data_c_to_l:        vec![0,0,1,1,2,2,2,2,10,10],
+                                    };  
+                                    
+        let poly_cc             =   Polytope{
+                                        data_l_to_fmin:     vec![0,0,1,1],
+                                        data_c_to_l:        vec![0,0,1,1,2,10,2,2,10,10],
+                                    };                                      
+        
+        assert!(    poly_aa.certifies_prior_exploration( &poly_bb ) );
+        assert!( !  poly_aa.certifies_prior_exploration( &poly_cc ) );
+     
     }
 
 }    

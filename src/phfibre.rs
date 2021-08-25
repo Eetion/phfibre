@@ -462,11 +462,22 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
     //  SHORT CIRCUIT IF WE HAVE ALREADY BEEN DOWN THIS ROAD
         // BENCHMARKS ON THE SQUARE SUBDIVIDED INTO TWO TRIANGLES (NO FINITE BARS)
         // with    this short circuit: 12.926543132
-        // without this short circuit: 44.080082316s    
-    if node.lev_set_sizes.size_last()          ==  Some( 0 ) {
-        for poly in results.iter() {
-            if poly.contains_extension( & node.polytope ) { return }
+        // without this short circuit: 44.080082316s  
+        
+    if node.lev_set_sizes.num_cells_total() < node.cells_all.len() {
+    // original short circuit:
+        if node.lev_set_sizes.size_last()          ==  Some( 0 ) {
+            for poly in results.iter() {
+                if poly.contains_extension( & node.polytope ) { return }
+            }
         }
+        // experimental new short circuit:
+        // else if node.lev_set_sizes.size_last() > Some( 1 )  //if ! node.polytope.lev_set_last_is_critical().unwrap() 
+        // {
+        //     for poly in results.iter() {
+        //         if  poly.certifies_prior_exploration( & node.polytope ) { return }
+        //     } 
+        // }   
     }
 
 

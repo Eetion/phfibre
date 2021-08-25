@@ -38,13 +38,20 @@ fn main() {
     let analyze_dowker_dual =   true;
 
     println!("\n\n2-SKELETON, NO FINITE BARS");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
       
 
@@ -70,13 +77,20 @@ fn main() {
     let analyze_dowker_dual =   true;
 
     println!("\n\n3-SKELETON, NO FINITE BARS");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );    
+    );   
 
 }
 
