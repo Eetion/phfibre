@@ -1,12 +1,12 @@
 //  DESCRIPTION
 
-//  The 2-simplex.
+//  The 2-sphere
 
 
 //  DEPENDENCIES
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
-use phfibre::pipelines::simplex_pipeline;
+use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use solar::utilities::sequences_and_ordinals::{ordinate_unique_vals, BiMapSequential};
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
@@ -51,37 +51,58 @@ fn main() {
     //  -------------------------------------------------------------------------------------------
 
     println!("\nUNCONSTRAINED FILTRATIONS");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
-            analyze_dowker_dual
-    );
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
+            analyze_dowker_dual,
+    );  
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------
 
     println!("\nLOWER EDGE");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_edge,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );       
+    );     
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
 
     println!("\nLOWER STAR");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_star,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );      
+    );       
 
 
     println!("\n\nBARCODE WITH 0 FINITE BARS // S^1 WITH 5 EDGES");
@@ -114,13 +135,20 @@ fn main() {
     //  -------------------------------------------------------------------------------------------
 
     println!("\nUNCONSTRAINED FILTRATIONS");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    );  
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------

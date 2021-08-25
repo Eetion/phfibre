@@ -11,6 +11,7 @@ use itertools::Itertools;
 // use std::cmp::Ord;
 // use std::iter;
 
+use serde::{Deserialize, Serialize};
 type Fil = usize;
 
 
@@ -24,7 +25,7 @@ type Fil = usize;
 
 /// Represents an (ordinal) polytope, or, equivalently, a family of upper/lower
 /// bounds on variable values.
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Serialize, Deserialize)]
 pub struct Polytope {
     pub data_l_to_fmin:       Vec< Fil >,         // function (level set ordinal) -> min possible filtration value
     pub data_c_to_l:          Vec< usize >,       // function (cell id) -> level set ordinal

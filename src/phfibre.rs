@@ -609,6 +609,10 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
         
         for (bar_id_count, bar_id) in node.bar_ids_now_inf_brn.iter().cloned().enumerate() { 
 
+            // (error - deprecated) short circuit if the current level set is non-empty and non-critical
+            // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 && ( ! node.polytope.lev_set_last_is_critical().unwrap() ) { continue };
+
+
             // clone info about bar to be added
             let bar_new     =   node
                                     .barcode
@@ -691,6 +695,9 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             //  bar_ids_dun 
             //  bar_ids_now
 
+            // (error, deprecated) short circuit if the current level set is non-empty and non-critical
+            // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 &&  ( ! node.polytope.lev_set_last_is_critical().unwrap() ) { continue };            
+
             // clone info about bar to be added
             let bar_new     =   node.barcode
                                     .bar_fin( bar_id );
@@ -765,6 +772,9 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
         //      WHETHER THE BAR IT WOULD CREATE WOULD LIE IN THE DESIRED SET
 
         for (bar_id_count, bar_id) in node.bar_ids_now_fin_die.iter().cloned().enumerate() {
+
+            // (error - deprecated) short circuit if the current level set is non-empty and non-critical
+            // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 && ( ! node.polytope.lev_set_last_is_critical().unwrap() ) { continue };            
 
             // clone info about bar to be added
             let bar_new         =   node.barcode
@@ -921,6 +931,9 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
         // loop over all dimensions
         for dim in 0..node.cell_ids_out.len() {
 
+            // (error - deprecated) short circuit if the current level set is critical
+            // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 && ( node.polytope.lev_set_last_is_critical().unwrap() ) { continue };            
+
             // short-circuit if we have already met the quota for degenerate bars in this dimension
             if node.bars_degn_quota.sindex( dim, 0 ) == 0 { 
                 // println!("skipping: quota {:?}, dim {:?}", &node.bars_degn_quota, &dim); 
@@ -1000,6 +1013,9 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
 
         // loop over all dimensions
         for dim in 1..node.cell_ids_out.len() {
+
+            // (error - deprecated) short circuit if the current level set is critical
+            // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 && ( node.polytope.lev_set_last_is_critical().unwrap() ) { continue };                  
 
             // loop over chains of given dimension with nonzero boundary, skipping empty ones but maintaining a global count of chains checked
             // (this is why filter has to come last)

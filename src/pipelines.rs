@@ -20,6 +20,9 @@ use std::hash::Hash;
 
 use itertools::Itertools;
 
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
+
 use ordered_float::OrderedFloat;
 
 type F  =   num::rational::Ratio<i64>;
@@ -108,6 +111,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
         );
     }
     println!("Each polytope facet has been checked for compatiblity with the given barcode.");
+
     
     analyze_fibre( 
         &   poly_complex_facets,
@@ -218,6 +222,8 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
             precondition_to_make_new_lev_set:   &   PreconditionToMakeNewLevSet,
             analyze_dowker_dual:        bool,
         )
+        ->
+        Vec< Polytope >
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
             FilRaw:     Clone + Debug + Ord + Hash, 
@@ -313,12 +319,9 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
         );
     }
     println!("Each polytope facet has been checked for compatiblity with the given barcode.");
-    
-    analyze_fibre( 
-        &   poly_complex_facets,
-            ring.clone(),
-            analyze_dowker_dual,
-    );
+
+    poly_complex_facets
+
     
 }                    
 
@@ -366,22 +369,9 @@ pub fn analyze_fibre< RingOp, RingElt > (
     // (new face enumerator) Time elapsed to enumerate polytope faces: 605.019797ms
 
     let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
-    let poly_complex_dim_top            =   poly_complex_dims.iter().max().unwrap(); 
       
     println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
     println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
-
-    let num_facets              =   poly_complex_facets.len();
-    let mut dismat              =   Vec::from_iter(
-                                        std::iter::repeat(
-                                            Vec::from_iter(
-                                                std::iter::repeat( OrderedFloat(1.) )
-                                                .take( num_facets)                                                
-                                            )
-                                        )
-                                        .take(num_facets)
-                                    );
-    for facet_id in 0 .. num_facets{ dismat[facet_id][facet_id] = OrderedFloat(0.) }
 
     let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
    

@@ -6,10 +6,13 @@
 //  DEPENDENCIES
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
-use phfibre::pipelines::simplex_pipeline;
+use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
+use phfibre::polytope::object_def::{Polytope};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+
+use std::io::Read;
 
 fn main() {
 
@@ -35,13 +38,41 @@ fn main() {
 
     let analyze_dowker_dual =   true;
 
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
+
+    let json_string =  serde_json::to_string(&poly_complex_facets ).unwrap();  
+    let fp  =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/square_2triangles_stringformat.json";
+    std::fs::write( &fp, json_string).expect("Unable to write file.");  
+
+    let mut data = String::new();
+    let mut file = std::fs::File::open( &fp ).expect("Unable to open file");
+    file.read_to_string( &mut data ).unwrap();
+    let recovered: Vec< Polytope > = serde_json::from_str( &data ).unwrap();
+    assert_eq!( &recovered, &poly_complex_facets );
+
+
+    let json_vec =  serde_json::to_vec(&poly_complex_facets ).unwrap();     
+    let fp  =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/square_2triangles_u8format.json";
+    std::fs::write( &fp, json_vec).expect("Unable to write file.");  
+
+    let mut data = String::new();
+    let mut file = std::fs::File::open( &fp ).expect("Unable to open file");
+    file.read_to_string( &mut data ).unwrap();
+    let recovered: Vec< Polytope > = serde_json::from_str( &data ).unwrap();
+    assert_eq!( &recovered, &poly_complex_facets );
 
     //  RESULTS
     //  -------

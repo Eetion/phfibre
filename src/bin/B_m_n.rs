@@ -6,7 +6,7 @@
 //  DEPENDENCIES
 
 use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
-use phfibre::pipelines::simplex_pipeline;
+use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::ConditionNone;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
 use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
@@ -21,7 +21,7 @@ fn main() {
     //  ----------------------------------------------------------------------------------------------
 
     //  By using the following struct, we impose not "lower-X" conditions
-    let precondition_to_make_new_lev_set    =   ConditionNone{};
+    let precondition_to_make_new_lev_set_lower_none    =   ConditionNone{};
     let analyze_dowker_dual                 =   true;
 
 
@@ -41,16 +41,24 @@ fn main() {
                                 };
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
+    
 
     println!("");    
     println!("B_3^1:");        
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------
@@ -92,13 +100,20 @@ fn main() {
 
     println!("");    
     println!("B_3^2:");        
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------
@@ -140,13 +155,20 @@ fn main() {
 
     println!("");    
     println!("B_3^3:");
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------
@@ -188,13 +210,20 @@ fn main() {
 
     println!("");    
     println!("B_2^1:");    
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------
@@ -220,13 +249,20 @@ fn main() {
 
     println!("");    
     println!("B_4^1:");        
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------
@@ -271,13 +307,20 @@ fn main() {
 
     println!("");    
     println!("B_5:");        
-    simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set,
+    let poly_complex_facets =       simplex_pipeline(
+                                        &   simplex_sequence,
+                                        &   barcode,
+                                        &   ring,
+                                        &   precondition_to_make_new_lev_set_lower_none,
+                                            analyze_dowker_dual
+                                    );  
+                                    
+    let analyze_dowker_dual =   true;
+    analyze_fibre( 
+        &   poly_complex_facets,
+            ring.clone(),
             analyze_dowker_dual,
-    );
+    ); 
 
     //  RESULTS
     //  -------    
