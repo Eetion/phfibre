@@ -37,26 +37,8 @@ type Fil = usize;
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  TO DO 
 
-// PRE-CHECK THAT BARCODE AND COMPLEX ARE COMPATIBLE
-// CHECK INTERSECTION 
-// CALCULATE STATISTICS ABOUT POLYTOPES
-// FUNCTION TO CHECK THAT BARCODE HAS BEEN COMPUTED CORRECTLY (IE COMPUTE BARCODE AFTER THE FACT, USING THE POLYHEDRON OBJECT)
-// (NOW, UPON REFLECTION, I THINK WE HAVE TO BE CAREFUL ABOUT WHETHER THIS IS TRULY WELL-FOUNDED, MATHEMATICALLY) ADD A SCREENER FOR WHETHER A NEW POSTIVE CELL SHOULD HAVE FINITE OR INFINITE LIFE
-// IMPLEMENT THE "CROSS-CHECK" STRATEGY AND COMPARE WITH ORIGINAL IMPLEMENTATION
 
-    //  PRECOMPUTE
-    //  compute: bars that stop and start at each endpoint
-   
-    //  FEASIBILITY CHECK
-    //  compute: ranks of boundary operators (concomitantly, betti numbers)
-    //  compute: bars_degn_quota[ dim ] = rank(boundary_(dim+1)) - #(finte bars of dimension dim)    
-    //  check: #(inf bars of dimension dim) == betti_dim( num_cells_total space )
-    //  check: #(fin bars of dimension dim) <= rank( num_cells_total space )
 
-    //  INITIALIZE PARTIAL DATA
-
-    //  EXPLORE THE TREE
-    //  remove duplicate polyhedra as we go
 
 
 
@@ -1097,10 +1079,11 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                
                 // update counters
                 child.lev_set_sizes.grow_last_set();    // number of cells born
-                
+
+                // drop the quota for degenerate bars by 1
                 match child.bars_degn_quota.as_mut() {
                     None => { return },
-                    Some(quota_vec) => { quota_vec[dim] -= 1; }         // drop the quota for degenerate bars by 1
+                    Some(quota_vec) => { quota_vec[dim] -= 1; }         
                 }
 
                 // RUN EXPLORE ON CHILD

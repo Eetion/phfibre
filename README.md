@@ -70,6 +70,7 @@ cargo run --bin I_m --release
 - add test to check whether a given cycle must have infinite or finite lifespan
 - try exporting to Poly-make
 - convert all references to BiMapSequential to BiMapSequential
+- (NOW, UPON REFLECTION, I THINK WE HAVE TO BE CAREFUL ABOUT WHETHER THIS IS TRULY WELL-FOUNDED, MATHEMATICALLY) ADD A SCREENER FOR WHETHER A NEW POSTIVE CELL SHOULD HAVE FINITE OR INFINITE LIFE
 
 
 

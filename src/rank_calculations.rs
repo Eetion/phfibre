@@ -1,4 +1,5 @@
 use solar::utilities::indexing_and_bijection::{SuperIndex};
+use solar::utilities::statistics::histogram;
 use crate::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use num::rational::Ratio;
 use std::iter::FromIterator;
@@ -209,6 +210,17 @@ pub fn num_degenerate_bars_per_degree< FilRaw >(
             return None 
         } else {
             quota[ deg ] -= num_bars_fin_per_dim[ deg ]
+        }
+    }
+
+    // check number of infinite bars in each degree matches betti numbers of space
+    let inf_bars_binned_by_dim  =   histogram( barcode.inf.iter().map(|x| x.dim.clone() ) );
+    let space_ranks             =   ranks.rank_homology_vec();
+    let deg_top                 =   std::cmp::max( inf_bars_binned_by_dim.len(), space_ranks.len() );
+    for deg in 0 .. deg_top + 1 {
+        if space_ranks.sindex( deg, 0 ) != inf_bars_binned_by_dim.sindex( deg, 0 ) {
+            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX\n");            
+            return None
         }
     }
 
