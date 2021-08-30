@@ -230,6 +230,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
             PreconditionToMakeNewLevSet: ExtraConditionToStartNewLevSet + Clone + Debug, 
 {
 
+
     //  DEFINE THE CELL DIMENSIONS + BOUNDARY MATRIX
     //  --------------------------------------------
 
@@ -289,7 +290,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
                         precondition_to_make_new_lev_set,
                 );
 
-    let mut poly_complex_facets     =   Vec::new();                                
+    let mut poly_complex_facets     =   Vec::new();   
 
     //  GATHER RESULTS
     //  --------------

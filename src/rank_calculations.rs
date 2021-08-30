@@ -194,7 +194,7 @@ pub fn num_degenerate_bars_per_degree< FilRaw >(
     barcode:    & Barcode< FilRaw >,
     ) 
     -> 
-    Vec< usize > 
+    Option< Vec< usize > >
     where FilRaw: Ord + Clone + Hash
 {
 
@@ -202,12 +202,17 @@ pub fn num_degenerate_bars_per_degree< FilRaw >(
     let mut quota       =   ranks.rank_boundaries_vec();
     
     // subtract number of bars in each degree
-    let mut num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim();    
+    let num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim();    
     for deg in 0 .. num_bars_fin_per_dim.len() {
-        quota[ deg ] -= num_bars_fin_per_dim[ deg ]
+        if num_bars_fin_per_dim[ deg ] >  quota[ deg ] { 
+            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX\n");
+            return None 
+        } else {
+            quota[ deg ] -= num_bars_fin_per_dim[ deg ]
+        }
     }
 
-    quota // this is a super vec
+    Some( quota ) // this is a super vec
 }
 
 

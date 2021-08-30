@@ -91,7 +91,7 @@ pub struct Node < 'a, FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet>
     ring:                   RingOp,
     boundary_buffer:        Vec< ( Cell, Coeff) >,          // a "holding space" for matrix entries, when these need to be moved around
 
-    bars_degn_quota:        Vec< usize >,                   // number of degenerate cells anticipated in each dimension    
+    bars_degn_quota:        Option< Vec< usize > >,         // number of degenerate cells anticipated in each dimension    
 
     lev_set_sizes:          LevelSetSizes,                  // Kth value = # cells in Kth level set
     polytope:               Polytope,    
@@ -421,42 +421,12 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug,
 { 
 
+    //  TERMINATE IMMEDIATELY IF BARCODE IS INCOMPATIBLE
 
-    // if node.polytope.min_vertex_is_compatible_with_ordinal_filt( &vec![2, 0, 1, 2, 2, 3] ) {   
-        
-    //     println!("-------------------------");
-    //     println!("node polytope:  {:?} {:?}", & node.polytope.vec_mapping_cell_id_to_min_filt_ordinal(), & node.polytope.data_c_to_l );         
-    //     println!("-------------------------");        
-    //     println!("{:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",    
-    //                                                 &   node.bars_degn_quota,
-    //                                                 node.lev_set_sizes.size_last()          ==  Some( 0 ),
-    //                                                 node.lev_set_sizes.num_cells_total()    ==  node.cells_all.len(),
-    //                                                 node.bar_ids_dun_fin.len()              ==  node.barcode.num_bars_fin(),
-    //                                                 node.bar_ids_dun_inf.len()              ==  node.barcode.num_bars_inf(),
-    //                                                 node.bar_ids_now_inf_brn.is_empty() &&     
-    //                                                 node.bar_ids_now_fin_brn.is_empty() &&    
-    //                                                 node.bar_ids_now_fin_die.is_empty(),
-    //                                                 node.polytope                           // the level set contains no "critical" cell
-    //                                                     .lev_set_last_is_critical()
-    //                                                     .unwrap(),                                                    
-    //                                                 node.cell_ids_out
-    //                                                 // & node.bar_ids_dun_fin,
-    //                                                 // & node.barcode.num_bars_fin(),
-
-    //     );
-    //     println!("node.bar_ids_now_fin_die {:?}", &node.bar_ids_now_fin_die);
-    //     println!(" node.cell_ids_pos_crit {:?}", & node.cell_ids_pos_crit);
-       
-
-    //     println!("quota forbids: {:?}", node.bars_degn_quota.sindex( 0, 0 ) == 0);
-
-    //     println!("node.lev_set_sizes.last_level_set_ordinal() {:?}", &node.lev_set_sizes.last_level_set_ordinal());
-
-    //     // std::thread::sleep(
-    //     //     std::time::Duration::from_millis(1000)
-    //     // ) 
-    //     first_pass_was_true     =   true;
-    // }
+    if node.bars_degn_quota.is_none() { 
+        println!("\nFUNCTIN <explore> CAN ADD NOTHING TO RESULTS BECAUSE BARCDE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX\n");
+        return 
+    }
 
     //  RECORD SOME USEFUL VARIABLES
     let node_lev_set_last_is_crit   =   node.polytope.lev_set_last_is_critical().unwrap();
@@ -1078,7 +1048,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             // if node.lev_set_sizes.size_last().unwrap() > 0  && node.polytope.num_lev_sets() > 1 && ( node.polytope.lev_set_last_is_critical().unwrap() ) { continue };            
 
             // short-circuit if we have already met the quota for degenerate bars in this dimension
-            if node.bars_degn_quota.sindex( dim, 0 ) == 0 { 
+            if node.bars_degn_quota.as_ref().map(|x| x.sindex(dim,0) ) == Some(0) { 
                 // println!("skipping: quota {:?}, dim {:?}", &node.bars_degn_quota, &dim); 
                 continue             
             }
@@ -1127,7 +1097,11 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                
                 // update counters
                 child.lev_set_sizes.grow_last_set();    // number of cells born
-                child.bars_degn_quota[dim] -= 1;         // drop the quota for degenerate bars by 1
+                
+                match child.bars_degn_quota.as_mut() {
+                    None => { return },
+                    Some(quota_vec) => { quota_vec[dim] -= 1; }         // drop the quota for degenerate bars by 1
+                }
 
                 // RUN EXPLORE ON CHILD
 
