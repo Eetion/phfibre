@@ -69,7 +69,14 @@ fn main() {
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );    
+    );  
+    
+    
+
+
+
+
+    
 }
 
 

@@ -273,7 +273,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0}, BarInfinite{dim:1, birth:1} ],
 //                                         fin: vec![],
-//                                         ordinal: ordinate( & vec![0, 1] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0, 1] ),
 //                                     };
 //         let perms               =   Vec::from_iter(
 //                                         (0..3).permutations(3)
@@ -289,7 +289,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0} ],
 //                                         fin: vec![],
-//                                         ordinal: ordinate( & vec![0] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0] ),
 //                                     };
 //         let perms               =   vec![
 //                                         vec![ 0, 2, 1, 3 ],
@@ -306,7 +306,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0} ],
 //                                         fin: vec![],
-//                                         ordinal: ordinate( & vec![0] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0] ),
 //                                     };
 //         let perms               =   vec![
 //                                         vec![ 4, 3, 2, 1, 0 ],
@@ -321,7 +321,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0} ],
 //                                         fin: vec![ BarFinite{dim:0, birth:1, death: 2} ],
-//                                         ordinal: ordinate( & vec![0, 1, 2] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0, 1, 2] ),
 //                                     };
 //         let perms               =   vec![
 //                                         vec![ 4, 3, 2, 1, 0 ],
@@ -336,7 +336,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0} ],
 //                                         fin: vec![ BarFinite{dim:0, birth:1, death: 2} ],
-//                                         ordinal: ordinate( & vec![0, 1, 2] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0, 1, 2] ),
 //                                     };
 //         let perms               =   vec![
 //                                         vec![ 3, 2, 1, 0 ],
@@ -352,7 +352,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0}, BarInfinite{dim:1, birth:1}, ],
 //                                         fin: vec![ ],
-//                                         ordinal: ordinate( & vec![0, 1] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0, 1] ),
 //                                     };
 
 //         deep_permutation_test_comprehensive( &complex_facets, &barcode );              
@@ -366,7 +366,7 @@ pub fn  fibre_facets_from_complex_facets< FilRaw, RingOp, RingElt > (
 //         let barcode             =   Barcode{
 //                                         inf: vec![ BarInfinite{dim:0, birth:0}, BarInfinite{dim:1, birth:1}, ],
 //                                         fin: vec![ ],
-//                                         ordinal: ordinate( & vec![0, 1] ),
+//                                         ordinal: BiMapSequential::from_vec( vec![0, 1] ),
 //                                     };
 //         deep_permutation_test(  &complex_facets, 
 //                                 &barcode, 

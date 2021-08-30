@@ -1,7 +1,7 @@
 
 
-// use crate::utilities::*;
-// use solar::utilities::indexing_and_bijection::{SuperVec, EndIndex};
+use crate::intervals_and_ordinals::BarcodeInverse;
+use solar::utilities::indexing_and_bijection::{SuperIndex};
 // use ordered_float::OrderedFloat;
 // use num::rational::Ratio;
 // use std::collections::{HashMap};
@@ -75,7 +75,7 @@ impl Polytope {
     }
 
     /// Rightmost finite filtration value
-    pub fn  last_of_all_filtration_ordinals( &self ) -> Option<Fil> { self.data_l_to_fmin.iter().cloned().last() }
+    pub fn  last_of_all_filtration_ordinals( &self ) -> Option<Fil> { self.data_l_to_fmin.last().map(|x| x.clone()) }
 
     /// Given an ordinal, determine whether the corresponding level set is critical.
     pub fn  lev_set_ord_to_is_critical( &self, level_set_ordinal: usize ) -> Option<bool> { 
@@ -370,10 +370,10 @@ impl Polytope {
     }
 
 
-    /// Given a partially-built polytope `othr` (meaning that `othr.cell_id_to_lev_set_ord` contains some
-    /// values equal to the number of cells in the complex, implying that these `cell_id`s have not been
-    /// assigned to a level set), determine whether `self` contains a polytope that the `othr` polytope 
-    /// could extend to.
+    /// Given a partially-built polytope `othr` ('partially' meaning that `othr.cell_id_to_lev_set_ord` 
+    /// assigns the value (number of cells in the complex) to certain cells, which is the convnetion
+    /// for indicating that those cells have not been assigned to level sets), determine whether `self` 
+    /// contains a polytope that the `othr` polytope could extend to.
     pub fn  contains_extension( &self, othr: & Polytope ) -> bool {
 
         let num_cells       =   self.num_cells();
@@ -422,7 +422,7 @@ impl Polytope {
     /// values equal to the number of cells in the complex, implying that these `cell_id`s have not been
     /// assigned to a level set), certify that `othr` has been previously explored as a possibility in 
     /// the normal course of the phfibre algorithm
-    pub fn  certifies_prior_exploration( &self, othr: & Polytope ) -> bool {
+    pub fn  certifies_prior_exploration( &self, othr: & Polytope, fmin_last_intersects_a_finite_bar: bool ) -> bool {
 
         let num_cells       =   self.num_cells();
         
@@ -431,18 +431,31 @@ impl Polytope {
         { return false }
 
 
+
+
         // create a mask that makes some elements of the last level set of othr appear to be 
         // unassigned, but returns proper level set assignment for all other cells
         let othr_lev_set_last               =   othr.num_lev_sets() - 1;
         let min_touched_lev_set_self_opt    =   ( 0 .. num_cells )
                                                     .filter( |x| othr.cell_id_to_lev_set_ord( *x ).unwrap() == othr_lev_set_last )
                                                     .map( |x| self.cell_id_to_lev_set_ord( x ).unwrap() )
-                                                    .min();
+                                                    .min();          
+        
+        // if the ciritcal value in question intersects a finite bar and the last contained level set
+        // in self is critical, then there might be problems concerning non-injective maps in homology, and we should abort
+        if fmin_last_intersects_a_finite_bar {
+            if let Some( min_touched_lev_set_self ) = min_touched_lev_set_self_opt { 
+                if  self.lev_set_ord_to_is_critical( min_touched_lev_set_self ).unwrap() 
+                {
+                    return false
+                } 
+            }              
+        }
         
         // can't use this trick if the level set currently being built in othr is critical
         //  ???? OR MAYBE YOU CAN???
-        // if let Some( min_touched_lev_set_self_inner ) = min_touched_lev_set_self_opt { 
-        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self_inner ).unwrap() {
+        // if let Some( min_touched_lev_set_self ) = min_touched_lev_set_self_opt { 
+        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self ).unwrap() {
         //         return false
         //     } 
         // }       
@@ -457,12 +470,12 @@ impl Polytope {
 
         // let min_touched_lev_set_self    =   
 
-        // if let Some( min_touched_lev_set_self_inner ) = min_touched_lev_set_self_opt { 
-        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self_inner ).unwrap() {
+        // if let Some( min_touched_lev_set_self ) = min_touched_lev_set_self_opt { 
+        //     if self.lev_set_ord_to_is_critical( min_touched_lev_set_self ).unwrap() {
         //         return false
         //     } 
         //     else {
-        //         min_touched_lev_set_self_inner                
+        //         min_touched_lev_set_self                
         //     }
         // };
 
@@ -871,15 +884,22 @@ mod tests {
                                         data_l_to_fmin:     vec![0,1],
                                         data_c_to_l:        vec![0,0,1,4],
                                     };       
+        
+        let fmin_last_intersects_a_finite_bar_t          =   true;
+        let fmin_last_intersects_a_finite_bar_f          =   false;        
                                     
         
-        // This test should return true wherever contains_extension returns true
-        assert!(    poly_a.certifies_prior_exploration( &poly_b ) );
-        assert!(    poly_a.certifies_prior_exploration( &poly_c ) );    
+        // This test should return true wherever contains_extension returns true -- provided no bars end at
+        // the associated critical value (by contrast, ending bars are not a problem for contains_extension 
+        // because there we assume that all level sets of other are either empty or completely built, which
+        // gives more "structure" to reason with)
+        assert!(    poly_a.certifies_prior_exploration( &poly_b, fmin_last_intersects_a_finite_bar_f ) );   
+        assert!(    poly_a.certifies_prior_exploration( &poly_c, fmin_last_intersects_a_finite_bar_f ) );                
 
         // It should return false where there are disagreements about min/max
         // possible filtraiton values
-        assert!( !  poly_a.certifies_prior_exploration( &poly_d ) );  
+        assert!( !  poly_a.certifies_prior_exploration( &poly_d, fmin_last_intersects_a_finite_bar_t ) );  
+        assert!( !  poly_a.certifies_prior_exploration( &poly_d, fmin_last_intersects_a_finite_bar_f ) );          
         
         // These tests, however, are unique to <certifies_prior_exploration>
         let poly_aa             =   Polytope{
@@ -888,17 +908,26 @@ mod tests {
                                     };
 
         let poly_bb             =   Polytope{
-                                        data_l_to_fmin:     vec![0,0,1,1],
+                                        data_l_to_fmin:     vec![0,0,1],
                                         data_c_to_l:        vec![0,0,1,1,2,2,2,2,10,10],
                                     };  
                                     
         let poly_cc             =   Polytope{
-                                        data_l_to_fmin:     vec![0,0,1,1],
+                                        data_l_to_fmin:     vec![0,0,1],
                                         data_c_to_l:        vec![0,0,1,1,2,10,2,2,10,10],
+                                    };     
+                                    
+        let poly_dd             =   Polytope{
+                                        data_l_to_fmin:     vec![0,0,1],
+                                        data_c_to_l:        vec![0,0,1,1,2,2,10,10,10,10],
                                     };                                      
         
-        assert!(    poly_aa.certifies_prior_exploration( &poly_bb ) );
-        assert!( !  poly_aa.certifies_prior_exploration( &poly_cc ) );
+        assert!( !  poly_aa.certifies_prior_exploration( &poly_bb, fmin_last_intersects_a_finite_bar_t ) ); // should fail due to presence of critical value with ending bar
+        assert!(    poly_aa.certifies_prior_exploration( &poly_bb, fmin_last_intersects_a_finite_bar_f ) );        
+        assert!( !  poly_aa.certifies_prior_exploration( &poly_cc, fmin_last_intersects_a_finite_bar_t ) );
+        assert!( !  poly_aa.certifies_prior_exploration( &poly_cc, fmin_last_intersects_a_finite_bar_f ) );   
+        assert!( !  poly_aa.certifies_prior_exploration( &poly_dd, fmin_last_intersects_a_finite_bar_t ) ); // should fail due to presence of critical value with ending bar
+        assert!(    poly_aa.certifies_prior_exploration( &poly_dd, fmin_last_intersects_a_finite_bar_f ) );                
      
     }
 

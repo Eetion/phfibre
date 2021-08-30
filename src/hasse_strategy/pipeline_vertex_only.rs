@@ -1,5 +1,5 @@
 
-use crate::phfibre::{Node, explore, verify_that_barcode_is_compatible, ExtraConditionToStartNewLevSet};
+use crate::hasse_strategy::compute_vertex_only::{Node, verify_that_barcode_is_compatible, ExtraConditionToStartNewLevSet, explore_vertex_only};
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse };
 use crate::polytope::object_def::Polytope;
 use crate::polytope::faces::{poly_complex_facets_to_whole_complex_bimapsequential};
@@ -56,7 +56,7 @@ type F  =   num::rational::Ratio<i64>;
 /// The boundary matrix is stored in column-major vec-of-vec format.  Entries in each column should
 /// appear in sorted order, according to row index.  The homological degree of
 /// each basis vector (i.e. chain) is recorded in `cell_dims`.
-pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
+pub fn  boundary_matrix_pipeline_vertex_only< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             boundary:               &   Vec< Vec< ( usize, RingElt ) > >,
             cell_id_to_prereqs:         Option< & Vec< Vec< usize > > >,
             cell_dims:              &   Vec< usize >,            
@@ -94,7 +94,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
     println!("barcode: {:?}", &barcode);
 
     let start = std::time::Instant::now();
-    explore( & root, &mut poly_complex_facets );
+    explore_vertex_only( & root, &mut poly_complex_facets );
     let duration = start.elapsed();
     println!("TIME TO COMPUTE FIBRE FACETS");
     println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
@@ -113,7 +113,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
     println!("Each polytope facet has been checked for compatiblity with the given barcode.");
 
     
-    analyze_fibre( 
+    analyze_fibre_vertex_only( 
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
@@ -215,7 +215,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
 /// Compute the PH fibre of a given barcode for a given simplicial complex over a given ring.
 /// 
 /// The `simplex_sequence` parameter should include all simplices in the complex.
-pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
+pub fn  simplex_pipeline_vertex_only< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             simplex_sequence:       &   Vec< Vec< usize > >,
             barcode:                &   Barcode< FilRaw >,
             ring:                   &   RingOp,     
@@ -302,7 +302,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
     println!("barcode: {:?}", &barcode);
 
     let start = std::time::Instant::now();
-    explore( & root, &mut poly_complex_facets );
+    explore_vertex_only( & root, &mut poly_complex_facets );
     let duration = start.elapsed();
     println!("TIME TO COMPUTE FIBRE FACETS");
     println!("Time elapsed to compute facets of PH fibre: {:?}", duration);
@@ -333,7 +333,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
 //  --------------------------------------------------------------------------------------------
 
 
-pub fn analyze_fibre< RingOp, RingElt > (
+pub fn analyze_fibre_vertex_only< RingOp, RingElt > (
             poly_complex_facets:    &   Vec< Polytope >, 
             ring:                       RingOp, 
             analyze_dowker_dual:        bool,           

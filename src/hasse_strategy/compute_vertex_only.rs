@@ -411,7 +411,7 @@ impl < 'a >
 //  ---------------------------------------------------------------------------  
 
 
-pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >( 
+pub fn  explore_vertex_only< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >( 
         node:       &       Node < FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >, 
         results:    &mut    Vec < Polytope > 
     )
@@ -463,7 +463,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
     let node_fmin_last              =   node.polytope.last_of_all_filtration_ordinals().unwrap();    
     let node_fmin_last_intersects_a_finite_bar    =   
                                             // evaluatest to true iff every bar that passes through this level set lasts forever (in which case, even if the class is critical and could be built up to a larger critical class in the future, the inclusion of the smaller into the larger will induce monomophrism, hence isomorphism)
-                                            node.barcode.fin.iter().any(|x| x.birth <= node_fmin_last && node_fmin_last < x.death );    
+                                            node.barcode.fin.iter().any(|x| x.birth <= node_fmin_last && node_fmin_last < x.death );        
 
 
     //  SHORT CIRCUIT IF WE HAVE ALREADY BEEN DOWN THIS ROAD
@@ -478,13 +478,13 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                 if poly.contains_extension( & node.polytope ) { return }
             }
         }
-        // experimental new short circuit:
-        else if node.lev_set_sizes.size_last() > Some( 1 )  
-        {
-            for poly in results.iter() {
-                if  poly.certifies_prior_exploration( & node.polytope, node_fmin_last_intersects_a_finite_bar ) { return }
-            } 
-        }   
+        // experimental new short circuit:  // CAN'T USE THIS HERE DUE TO FACT WE'RE ONLY COMPUTING VERTICES / PROHIBITION ON NON-CRITICAL SETS
+        // else if node.lev_set_sizes.size_last() > Some( 1 ) 
+        // {
+        //     for poly in results.iter() {
+        //         if  poly.certifies_prior_exploration( & node.polytope, node_fmin_last_intersects_a_finite_bar ) { return }
+        //     } 
+        // }   
 
         // for poly in results.iter() {
         //     if  poly.certifies_prior_exploration( & node.polytope ) { return }
@@ -538,7 +538,11 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
         //  IF FEASIBLE, INITIALIZE NEW LEVEL SET 
         //  ---------------------------------------------------------------------
      
-        if node.lev_set_sizes.size_last() != Some( 0 )      &&  // current level set is nonempty 
+        if      node.polytope.num_lev_sets() <= node.barcode.top_fil().unwrap() + 2 && // !! THIS IS SPECIAL TO GENERATING VERTICES ONLY !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+                node.lev_set_sizes.size_last() != Some( 0 )      &&  // current level set is nonempty 
                 node.precondition_to_make_new_lev_set.extra_condition_to_start_new_lev_set( & node.polytope ) && 
                 node.cell_ids_pos_degn.is_empty()           &&  // C-rule (degenerate) there are no unmatched "degenerate" positive cells
                 (                                               // C-rule (critical) 
@@ -574,6 +578,10 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             child.polytope.push_new_lev_set();              // post-pend new level set to polytope object (note this object doesn't have a well formed notion of an empty level set)
 
 
+            
+
+
+
             // IF PARENT NODE IS CRITICAL, THEN (1) UPDATE BARCODE ENDPOINT, AND (2) UPDATE SET OF BARS TO ACCOUNT FOR
 
             // NB: we don't check that bc_endpoint_now < maximum_endpoint; nothing bad happens
@@ -581,13 +589,13 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             // produce an infinite loop, because we only reach this point after creating a new
             // nonempty level set.
 
-            if  node_lev_set_last_is_crit  { 
+            if  node.polytope.lev_set_last_is_critical().unwrap()  { 
                 
                 // update barcode endpoint
 
                 // child.polytope.ensure_last_lev_set_critical();
                 
-                let bc_endpoint_now         =   node_fmin_last + 1;
+                let bc_endpoint_now         =   child.polytope.last_of_all_filtration_ordinals().unwrap() + 1;
 
 
                 // update set of bars to account for
@@ -619,22 +627,21 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));        
             
             // println!("CALL 1: INITIALIZED NEW LEV SET");
-            explore( & child, results );
+            explore_vertex_only( & child, results );
 
-            // I DON'T THINK WE CAN USE THIS SHORT CIRCUIT AT ALL ANY MORE
+            // NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            
+            // THIS SHORT CIRCUIT IS PREDICATED ON THE ABILITY TO "MAKE UP FOR MISSED CHANCES" WITH NON-CRITICAL CLASSES; SINCE WE CAN'T 
+            // MAKE DEGENERATE CLASSES HERE, THAT CREATES A PROBLEM.  
+            // THIS IS SPECIFICALLY AN ISSUE WHEN THE CURRENT CLASS IS THE LAST NONEMPTY AND ONLY DEGENERATE CLASS; EFFECTIVELY,
+            // THE LINE FORCES THE PROGRAM TO STOP CONSTRUCTING THIS CLASS WHEN IT IS POSSIBLE TO DO SO, BUT THEN OTHER CODE PREVENTS
+            // THE TRUNCATED CLASS FROM EVER BEING COMPLETED TO A FULLY DEFINED POLYTOPE
+            // CONCRETELY, THIS TECHNIQUE HAS SHOWN ITSELF TO CAUSE PROBLEMS IN 
+            // COUNTING THE VERICES OF TEH FIBRE OF THE TRIVIAL BARCODE FOR THE SQUARE SUBDIVIDED INTO TWO TRIANGLES
             // we can only use this short-circuit for degenerate sets; for critical sets it's possible we may need to keep going
-            if  (   // either the level set is critical (so any future additions could be simulated by merging this class upward)
-                    ! 
-                    node_lev_set_last_is_crit
-                )
-                ||
-                (   // or every bar that passes through this level set lasts forever (thus, even if the class is critical and could be built up to a larger critical class in the future, the inclusion of the smaller into the larger will induce monomophrism, hence isomorphism)
-                    !
-                    node_fmin_last_intersects_a_finite_bar
-                )                
+            // if ! node.polytope.lev_set_last_is_critical().unwrap() { return } 
 
-
-            { return } 
+            // END NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             
         }
 
@@ -756,8 +763,13 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                     // println!("node.cell_ids_pos_degn: {:?}", &node.cell_ids_pos_degn);     
                     // println!("child.cell_ids_pos_degn: {:?}", &child.cell_ids_pos_degn);      
                                         
-                    // println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );                                                                      
-                    explore( & child, results );
+                    // println!("CALL 6: ADDED DEATH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone()-1 );  
+
+                    
+
+
+                    
+                    explore_vertex_only( & child, results );
                 }
             }
         }     
@@ -898,7 +910,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                     // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                       
                     
                     // println!("CALL 4: ADDED DEATH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                                                    
-                    explore( & child, results );
+                    explore_vertex_only( & child, results );
                 }
             }
         }        
@@ -978,7 +990,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                 
                 
                 // println!("CALL 2: ADDED BIRTH CELL FOR INF BAR OF DIM {:?}", bar_new.dim());                
-                explore( & child, results );
+                explore_vertex_only( & child, results );
             }
         } 
         
@@ -1058,7 +1070,7 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                 // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) ));                
                 
                 // println!("CALL 3: ADDED BIRTH CELL FOR FIN BAR OF DIM {:?}", bar_new.dim());                
-                explore( & child, results );
+                explore_vertex_only( & child, results );
 
             }
         } 
@@ -1146,8 +1158,14 @@ pub fn  explore< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
                 // println!("CELL IDS OUT: {:?}", & child.cell_ids_out );                       
                 // println!("BIRTH ORDINALS: {:?}", Vec::from_iter( child.cells_all.iter().cloned().map(|x| x.birth_ordinal) )); 
 
+                //   NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                if node.polytope.num_lev_sets() <= node.barcode.top_fil().unwrap() + 1 {
+                    child.polytope.ensure_last_lev_set_critical();  // THIS IS SPECIAL TO THE CASE OF COMPUTING VERTICES ONLY
+                }
+                //   NOTE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!                        
+                
                 // println!("CALL 5: ADDED BIRTH CELL FOR NON-CRICIAL BAR OF DIM {:?}", dim.clone() );                                    
-                explore( & child, results );
+                explore_vertex_only( & child, results );
             }
         }
     }

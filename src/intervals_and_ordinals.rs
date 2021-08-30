@@ -249,6 +249,7 @@ impl BarcodeInverse{
         return endpoint_to_barids
     }
     
+    
 }
 
 
