@@ -66,7 +66,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
             analyze_dowker_dual:        bool,
             save_dir_opt:               Option< &str >,
         )
-    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
+    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone + Debug,
             RingElt:    Clone + Debug + Ord,
             FilRaw:     Clone + Debug + Ord + Hash, 
             PreconditionToMakeNewLevSet:    ExtraConditionToStartNewLevSet + Clone + Debug, 
@@ -112,6 +112,48 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
         );
     }
     println!("Each polytope facet has been checked for compatiblity with the given barcode.");
+
+    if let Some( save_dir ) = save_dir_opt {
+
+        // boundary:               &   Vec< Vec< ( usize, RingElt ) > >,
+        // cell_id_to_prereqs:         Option< & Vec< Vec< usize > > >,
+        // cell_dims:              &   Vec< usize >,            
+        // barcode:                &   Barcode< FilRaw >,
+        // ring:                   &   RingOp,           
+        // precondition_to_make_new_lev_set:   &PreconditionToMakeNewLevSet, 
+        // analyze_dowker_dual:        bool,
+        // save_dir_opt:               Option< &str >,
+
+        // The type of `json_formatted_input` is `serde_json::Value`
+        let json_formatted_input = json!({
+            "boundary": format!("{:?}", &boundary),
+            "cell_id_to_prereqs": cell_id_to_prereqs.clone(),
+            "cell_dims": cell_dims.clone(),
+            "barcode": format!("{:?}", &barcode),
+            "ring": format!("{:?}", &ring),
+            "precondition_to_make_new_lev_set": format!("{:?}", &precondition_to_make_new_lev_set ),
+            "analyze_dowker_dual": analyze_dowker_dual.clone(),
+            "save_dir_opt": save_dir_opt.clone(),
+        });
+
+        // The type of `json_formatted_input` is `serde_json::Value`            
+        let json_formatted_output = json!({
+            "poly_complex_facets": poly_complex_facets.clone(),
+        });   
+            
+        // save the input
+        let json_string =  serde_json::to_string_pretty(&json_formatted_input ).unwrap();  
+        let fp  =  format!("{}{}", save_dir, "/algorithm_input.json");
+        std::fs::write( &fp, json_string).expect( &format!("Unable to write to file <{}>.", &fp));          
+
+        // save the output
+        let json_string =  serde_json::to_string( &json_formatted_output ).unwrap();  
+        let fp  =  format!("{}{}", save_dir, "/algorithm_output.json");
+        std::fs::write( &fp, json_string).expect("Unable to write file.");                  
+        
+            
+            
+    }    
 
     
     analyze_fibre( 
@@ -350,12 +392,12 @@ pub fn  simplex_pipeline< 'de, FilRaw, RingOp, RingElt, PreconditionToMakeNewLev
             
         // save the input
         let json_string =  serde_json::to_string_pretty(&json_formatted_input ).unwrap();  
-        let fp  =  format!("{}{}", save_dir, "/input.json");
+        let fp  =  format!("{}{}", save_dir, "/algorithm_input.json");
         std::fs::write( &fp, json_string).expect( &format!("Unable to write to file <{}>.", &fp));          
 
         // save the output
-        let json_string =  serde_json::to_string_pretty( &json_formatted_output ).unwrap();  
-        let fp  =  format!("{}{}", save_dir, "/output.json");
+        let json_string =  serde_json::to_string( &json_formatted_output ).unwrap();  
+        let fp  =  format!("{}{}", save_dir, "/algorithm_output.json");
         std::fs::write( &fp, json_string).expect("Unable to write file.");                  
         
             
@@ -515,7 +557,7 @@ pub fn analyze_fibre< RingOp, RingElt > (
         });
 
         let json_string =  serde_json::to_string_pretty( &json_formatted_analysis ).unwrap();          
-        let fp  =  format!("{}{}", save_dir, "/analysis.json");
+        let fp  =  format!("{}{}", save_dir, "/output_analysis.json");
         std::fs::write( &fp, json_string).expect("Unable to write file.");                    
             
     }    
