@@ -43,13 +43,15 @@ fn main() {
     //     &   precondition_to_make_new_lev_set_lower_none,
     //         analyze_dowker_dual,
     // );
-    let poly_complex_facets =       simplex_pipeline(
-        &   simplex_sequence,
-        &   barcode,
-        &   ring,
-        &   precondition_to_make_new_lev_set_lower_none,
-            false, // do not analyze the dowker dual to the nerve complex
-    );  
+    let save_dir_opt        =   None;
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        false, // do not analyze the dowker dual to the nerve complex
+                                        save_dir_opt,
+                                );  
 
     //  ANALYZE    
     let analyze_dowker_dual =   false;
@@ -57,7 +59,8 @@ fn main() {
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );      
+            save_dir_opt,
+    );       
     
 
 }

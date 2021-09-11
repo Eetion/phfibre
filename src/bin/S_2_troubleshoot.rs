@@ -14,6 +14,8 @@ use std::io::Read;
 
 fn main() {
 
+    let save_dir_opt        =   None; // we will not save any files    
+
 
     //  LOAD FACETS
     let filepath                =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s2_bars4.json";
@@ -31,6 +33,7 @@ fn main() {
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );    
+            save_dir_opt,
+    );     
 
 }

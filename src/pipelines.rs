@@ -64,6 +64,7 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
             ring:                   &   RingOp,           
             precondition_to_make_new_lev_set:   &PreconditionToMakeNewLevSet, 
             analyze_dowker_dual:        bool,
+            save_dir_opt:               Option< &str >,
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,
@@ -117,7 +118,8 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    ); 
         
 }
 
@@ -215,18 +217,19 @@ pub fn  boundary_matrix_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNew
 /// Compute the PH fibre of a given barcode for a given simplicial complex over a given ring.
 /// 
 /// The `simplex_sequence` parameter should include all simplices in the complex.
-pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
+pub fn  simplex_pipeline< 'de, FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >(
             simplex_sequence:       &   Vec< Vec< usize > >,
             barcode:                &   Barcode< FilRaw >,
             ring:                   &   RingOp,     
             precondition_to_make_new_lev_set:   &   PreconditionToMakeNewLevSet,
             analyze_dowker_dual:        bool,
+            save_dir_opt:               Option< &str >,
         )
         ->
         Vec< Polytope >
-    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
-            RingElt:    Clone + Debug + Ord,
-            FilRaw:     Clone + Debug + Ord + Hash, 
+    where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone + Debug, 
+            RingElt:    Clone + Debug + Ord, 
+            FilRaw:     Clone + Debug + Ord + Hash + Serialize + Deserialize<'de>, 
             PreconditionToMakeNewLevSet: ExtraConditionToStartNewLevSet + Clone + Debug, 
 {
 
@@ -287,7 +290,7 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
                         cell_id_to_prereqs,
                     &   cell_dims,  
                         ring.clone(),
-                        precondition_to_make_new_lev_set,
+                        precondition_to_make_new_lev_set
                 );
 
     let mut poly_complex_facets     =   Vec::new();   
@@ -321,6 +324,46 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
     }
     println!("Each polytope facet has been checked for compatiblity with the given barcode.");
 
+    if let Some( save_dir ) = save_dir_opt {
+
+        // simplex_sequence:       &   Vec< Vec< usize > >,
+        // barcode:                &   Barcode< FilRaw >,
+        // ring:                   &   RingOp,     
+        // precondition_to_make_new_lev_set:   &   PreconditionToMakeNewLevSet,
+        // analyze_dowker_dual:        bool,
+        // save_dir_opt:               Option< &str >,
+
+        // The type of `json_formatted_input` is `serde_json::Value`
+        let json_formatted_input = json!({
+            "simplex_sequence": simplex_sequence.clone(),
+            "barcode": format!("{:?}", &barcode),
+            "ring": format!("{:?}", ring.clone()),
+            "precondition_to_make_new_lev_set": format!("{:?}", &precondition_to_make_new_lev_set ),
+            "analyze_dowker_dual": analyze_dowker_dual.clone(),
+            "save_dir_opt": save_dir_opt.clone(),
+        });
+
+        // The type of `json_formatted_input` is `serde_json::Value`            
+        let json_formatted_output = json!({
+            "poly_complex_facets": poly_complex_facets.clone(),
+        });   
+            
+        // save the input
+        let json_string =  serde_json::to_string(&json_formatted_input ).unwrap();  
+        let fp  =  format!("{}\n{}", save_dir, "/input.json");
+        std::fs::write( &fp, json_string).expect("Unable to write file.");          
+
+        // save the output
+        let json_string =  serde_json::to_string( &json_formatted_output ).unwrap();  
+        let fp  =  format!("{}\n{}", save_dir, "/output.json");
+        std::fs::write( &fp, json_string).expect("Unable to write file.");                  
+        
+            
+            
+    }
+
+
+
     poly_complex_facets
 
     
@@ -337,7 +380,8 @@ pub fn  simplex_pipeline< FilRaw, RingOp, RingElt, PreconditionToMakeNewLevSet >
 pub fn analyze_fibre< RingOp, RingElt > (
             poly_complex_facets:    &   Vec< Polytope >, 
             ring:                       RingOp, 
-            analyze_dowker_dual:        bool,           
+            analyze_dowker_dual:        bool,  
+            save_dir_opt:               Option< &str >,         
         )
     where   RingOp:     Ring<RingElt> + Semiring<RingElt> + DivisionRing<RingElt> + Clone,
             RingElt:    Clone + Debug + Ord,

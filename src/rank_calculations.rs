@@ -205,21 +205,23 @@ pub fn num_degenerate_bars_per_degree< FilRaw >(
     // subtract number of bars in each degree
     let num_bars_fin_per_dim    =   barcode.num_bars_fin_per_dim();    
     for deg in 0 .. num_bars_fin_per_dim.len() {
-        if num_bars_fin_per_dim[ deg ] >  quota[ deg ] { 
-            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX\n");
+        if num_bars_fin_per_dim.sindex( deg, 0 ) >  quota.sindex( deg, 0 ) { 
+            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX: THE NUMBER OF FINITE BARS EXCEEDS THE DIMENSION OF THE BOUNDARY SPACE\n");
             return None 
-        } else {
+        } else if quota.sindex( deg, 0 ) > 0 {
             quota[ deg ] -= num_bars_fin_per_dim[ deg ]
         }
     }
 
     // check number of infinite bars in each degree matches betti numbers of space
     let inf_bars_binned_by_dim  =   histogram( barcode.inf.iter().map(|x| x.dim.clone() ) );
-    let space_ranks             =   ranks.rank_homology_vec();
-    let deg_top                 =   std::cmp::max( inf_bars_binned_by_dim.len(), space_ranks.len() );
+    let betti_numbers           =   ranks.rank_homology_vec();
+    let deg_top                 =   std::cmp::max( inf_bars_binned_by_dim.len(), betti_numbers.len() );
     for deg in 0 .. deg_top + 1 {
-        if space_ranks.sindex( deg, 0 ) != inf_bars_binned_by_dim.sindex( deg, 0 ) {
-            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX\n");            
+        if betti_numbers.sindex( deg, 0 ) != inf_bars_binned_by_dim.sindex( deg, 0 ) {
+            println!("betti numbers: {:?}", &betti_numbers );
+            println!("number of infinite bars, binned by dimension: {:?}", &inf_bars_binned_by_dim );            
+            println!("\nBARCODE IS INCOMPATIBLE WITH THIS BOUNDARY MATRIX: THE NUMBER OF INFINITE BARS DOES NOT MATCH THE BETTI NUMBERS OF THE TOTAL SPACE\n");            
             return None
         }
     }

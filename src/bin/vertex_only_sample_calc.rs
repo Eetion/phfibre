@@ -57,7 +57,8 @@ fn main() {
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    ); 
+            // save_dir_opt,
+    );  
 
     let json_string =  serde_json::to_string(&poly_complex_facets ).unwrap();  
     let fp  =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/square_2triangles_stringformat.json";

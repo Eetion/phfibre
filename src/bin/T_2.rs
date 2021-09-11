@@ -16,6 +16,8 @@ use solar::rings::ring::{Ring, Semiring};
 
 fn main() {
 
+    let save_dir_opt        =   None;  // we will not save any files
+
 
     //  ----------------------------------------------------------------------------------------------    
     //  DEFINE COEFFICIENT RING
@@ -85,7 +87,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    ); 
 
     //  RESULTS
     // --------------------------------------------------------------------------------------------- 
@@ -160,7 +163,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    ); 
 
     //  RESULTS
     // --------------------------------------------------------------------------------------------- 

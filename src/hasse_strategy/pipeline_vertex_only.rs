@@ -117,7 +117,8 @@ pub fn  boundary_matrix_pipeline_vertex_only< FilRaw, RingOp, RingElt, Precondit
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );
+            // save_dir_opt,
+    ); 
         
 }
 

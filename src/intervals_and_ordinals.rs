@@ -8,6 +8,7 @@ use std::hash::Hash;
 use std::iter::FromIterator;
 use std::cmp::Ord;
 use std::iter;
+use serde::{Deserialize, Serialize};
 
 // type Cell = usize;
 // type Coeff = Ratio< i64 >;
@@ -34,7 +35,7 @@ pub fn to_ordered_float( v: & Vec< f64 > ) -> Vec< OrderedFloat< f64> > { v.iter
 //  ---------------------------------------------------------------------------  
 
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct BarFinite 
 { 
     pub dim:        usize, 
@@ -47,19 +48,20 @@ impl BarFinite{
     pub fn death( &self ) -> Fil { self.death.clone() }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 pub struct BarInfinite { 
     pub dim:        usize, 
     pub birth:      Fil 
 }
-impl BarInfinite{ 
+impl <'de>
+    BarInfinite{ 
     pub fn dim( &self ) -> usize { self.dim.clone()   }
     pub fn birth( &self ) -> Fil { self.birth.clone() }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Barcode< FilRaw > 
-    where FilRaw: Clone + Ord + Hash
+    where   FilRaw: Clone + Ord + Hash
 {
     pub inf:            Vec< BarInfinite >,     // infinite bars (birth ordinals)
     pub fin:            Vec< BarFinite >,       // finite bars (birth/death ordinals)

@@ -21,6 +21,8 @@ use std::io::Read;
 
 fn main() {
 
+    let save_dir_opt        =   None; // we will not save any files    
+
 
     //  ----------------------------------------------------------------------------------------------    
     //  2-SKELETON OF 3-SIMPLEX, 1 FINITE BAR IN DIM 0, 1 FINITE BAR IN DIM 1
@@ -43,13 +45,14 @@ fn main() {
 
     println!("\n\n2-SKELETON, BARCODE:(0, [0,INF)), (0, [1,2)), (1, [3,4)), (2, [5,INF))");
 
-    let poly_complex_facets =       simplex_pipeline(
-                                        &   simplex_sequence,
-                                        &   barcode,
-                                        &   ring,
-                                        &   precondition_to_make_new_lev_set_lower_none,
-                                            false, // do not analyze the dowker dual to the nerve complex
-                                    );  
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        false, // do not analyze the dowker dual to the nerve complex
+                                        save_dir_opt,
+                                );  
 
 
     //  SAVE RESULTS
@@ -69,7 +72,8 @@ fn main() {
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );  
+            save_dir_opt,
+    );   
     
     
 

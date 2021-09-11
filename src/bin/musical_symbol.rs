@@ -15,6 +15,8 @@ use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up
 //  CODE
 
 fn main() {
+
+    let save_dir_opt        =   None; // we will not save any files    
         
 
     //  ----------------------------------------------------------------------------------------------    
@@ -43,7 +45,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    ); 
 
     //  RESULTS
     //  -------

@@ -51,58 +51,67 @@ fn main() {
     //  -------------------------------------------------------------------------------------------
 
     println!("\nUNCONSTRAINED FILTRATIONS");
-    let poly_complex_facets =       simplex_pipeline(
-                                        &   simplex_sequence,
-                                        &   barcode,
-                                        &   ring,
-                                        &   precondition_to_make_new_lev_set_lower_none,
-                                            analyze_dowker_dual
-                                    );  
+    let save_dir_opt        =   None;
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        analyze_dowker_dual,
+                                        save_dir_opt,
+                                ); 
 
     let analyze_dowker_dual =   true;
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );  
+            save_dir_opt,
+    );   
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------
 
     println!("\nLOWER EDGE");
-    let poly_complex_facets =       simplex_pipeline(
-                                        &   simplex_sequence,
-                                        &   barcode,
-                                        &   ring,
-                                        &   precondition_to_make_new_lev_set_lower_none,
-                                            analyze_dowker_dual
-                                    );  
+    let save_dir_opt        =   None;
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        analyze_dowker_dual,
+                                        save_dir_opt,
+                                ); 
 
     let analyze_dowker_dual =   true;
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );     
+            save_dir_opt,
+    );      
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
 
     println!("\nLOWER STAR");
-    let poly_complex_facets =       simplex_pipeline(
-                                        &   simplex_sequence,
-                                        &   barcode,
-                                        &   ring,
-                                        &   precondition_to_make_new_lev_set_lower_none,
-                                            analyze_dowker_dual
-                                    );  
+    let save_dir_opt        =   None;
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        analyze_dowker_dual,
+                                        save_dir_opt,
+                                ); 
 
     let analyze_dowker_dual =   true;
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );       
+            save_dir_opt,
+    );        
 
 
     println!("\n\nBARCODE WITH 0 FINITE BARS // S^1 WITH 5 EDGES");
@@ -135,20 +144,23 @@ fn main() {
     //  -------------------------------------------------------------------------------------------
 
     println!("\nUNCONSTRAINED FILTRATIONS");
-    let poly_complex_facets =       simplex_pipeline(
-                                        &   simplex_sequence,
-                                        &   barcode,
-                                        &   ring,
-                                        &   precondition_to_make_new_lev_set_lower_none,
-                                            analyze_dowker_dual
-                                    );  
+    let save_dir_opt        =   None;
+    let poly_complex_facets =   simplex_pipeline(
+                                    &   simplex_sequence,
+                                    &   barcode,
+                                    &   ring,
+                                    &   precondition_to_make_new_lev_set_lower_none,
+                                        analyze_dowker_dual,
+                                        save_dir_opt,
+                                ); 
 
     let analyze_dowker_dual =   true;
     analyze_fibre( 
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
-    );  
+            save_dir_opt,
+    );   
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------
@@ -160,7 +172,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_edge,
             analyze_dowker_dual,
-    );       
+            save_dir_opt,
+    );        
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
@@ -172,7 +185,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_star,
             analyze_dowker_dual,
-    );            
+            save_dir_opt,
+    );             
 
 }
 

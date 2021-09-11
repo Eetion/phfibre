@@ -16,6 +16,8 @@ use std::iter::FromIterator;
 
 fn main() {
 
+    let save_dir_opt        =   None; // we will not save results to file
+
     //  -------------------------------------------------------------------------------------------    
     //  5-VERTEX INTERVAL WITH NO FINITE BARS
     //  -------------------------------------------------------------------------------------------
@@ -60,7 +62,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    );   
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------
@@ -71,7 +74,8 @@ fn main() {
         &   barcode,
         &   ring,
         &   precondition_to_make_new_lev_set_lower_edge,
-            analyze_dowker_dual,        
+            analyze_dowker_dual,   
+            save_dir_opt,     
     ); 
 
     //  LOWER STAR
@@ -84,7 +88,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_star,
             analyze_dowker_dual,
-    );    
+            save_dir_opt,
+    );     
 
     
 
@@ -120,7 +125,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_none,
             analyze_dowker_dual,
-    );
+            save_dir_opt,
+    ); 
 
     //  LOWER EDGE
     //  -------------------------------------------------------------------------------------------
@@ -132,7 +138,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_edge,
             analyze_dowker_dual,
-    );     
+            save_dir_opt,
+    );      
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
@@ -144,7 +151,8 @@ fn main() {
         &   ring,
         &   precondition_to_make_new_lev_set_lower_star,
             analyze_dowker_dual,
-    );      
+            save_dir_opt,
+    );       
 
 
 }

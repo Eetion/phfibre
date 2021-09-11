@@ -64,12 +64,12 @@ cargo run --bin I_m --release
 
 ## To-do
 
+- (for use on cluster) function to export data in two files: (i) (the minimum needed to recover results) the input complex, the barcode, the coefficient ring, and the facets of the fibre, (ii) the interesting statistics (as reported by the analysis function)
 - turn B_m_n.rs into a unit test
 - typically the number of vertices is very small, compared to the number of cells in the complex; one could either try to enumerate vertices first, then either use this information to dramatically cut down the search space for higher dimensinoal polytopes, or attempt to evaluate the truth/falsehood of the statement (this set of vertices is contained within a polytope) directly, in order to construct the dowker dual to the nerve complex
 - parallelization
 - add test to check whether a given cycle must have infinite or finite lifespan
 - try exporting to Poly-make
-- convert all references to BiMapSequential to BiMapSequential
 - (NOW, UPON REFLECTION, I THINK WE HAVE TO BE CAREFUL ABOUT WHETHER THIS IS TRULY WELL-FOUNDED, MATHEMATICALLY) ADD A SCREENER FOR WHETHER A NEW POSTIVE CELL SHOULD HAVE FINITE OR INFINITE LIFE
 
 

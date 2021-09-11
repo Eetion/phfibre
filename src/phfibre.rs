@@ -13,14 +13,15 @@ use solar::cell_complexes::simplices_unweighted::facets::{
 use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets     }; 
 use num::rational::Ratio;
+use std;
 use std::collections::{HashSet};
 use std::hash::Hash;
 use std::iter::FromIterator;
-use std;
 use std::fmt::Debug;
 use ordered_float::OrderedFloat;
 use auto_impl::auto_impl;
 use itertools::Itertools;
+use serde::{Serialize, Deserialize};
 
 type Cell = usize;
 type Coeff = Ratio< i64 >;
@@ -233,7 +234,7 @@ pub trait ExtraConditionToStartNewLevSet {
 
 //  NO RESTRICTION
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConditionNone { }
 
 impl 
