@@ -349,13 +349,13 @@ pub fn  simplex_pipeline< 'de, FilRaw, RingOp, RingElt, PreconditionToMakeNewLev
         });   
             
         // save the input
-        let json_string =  serde_json::to_string(&json_formatted_input ).unwrap();  
-        let fp  =  format!("{}\n{}", save_dir, "/input.json");
-        std::fs::write( &fp, json_string).expect("Unable to write file.");          
+        let json_string =  serde_json::to_string_pretty(&json_formatted_input ).unwrap();  
+        let fp  =  format!("{}{}", save_dir, "/input.json");
+        std::fs::write( &fp, json_string).expect( &format!("Unable to write to file <{}>.", &fp));          
 
         // save the output
-        let json_string =  serde_json::to_string( &json_formatted_output ).unwrap();  
-        let fp  =  format!("{}\n{}", save_dir, "/output.json");
+        let json_string =  serde_json::to_string_pretty( &json_formatted_output ).unwrap();  
+        let fp  =  format!("{}{}", save_dir, "/output.json");
         std::fs::write( &fp, json_string).expect("Unable to write file.");                  
         
             
@@ -390,9 +390,12 @@ pub fn analyze_fibre< RingOp, RingElt > (
     //  ------
 
     println!("POLYHEDRAL COMPLEX FACETS");
-    println!("number of facets (total): {:?}", poly_complex_facets.len() ); 
-    println!("number of facets (binned by dimension): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );  
-    println!("number of facets (binned by number of vertices): {:?}", histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) ) );      
+    let num_facets_total                =   poly_complex_facets.len();
+    let num_facets_binned_by_dim        =   histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
+    let num_facets_binned_by_num_verts  =   histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
+    println!("number of facets (total): {:?}", &num_facets_total ); 
+    println!("number of facets (binned by dimension): {:?}", &num_facets_binned_by_dim  );  
+    println!("number of facets (binned by number of vertices): {:?}", &num_facets_binned_by_num_verts );      
 
    
     println!("POLYHEDRAL COMPLEX CELLS"); 
@@ -411,9 +414,11 @@ pub fn analyze_fibre< RingOp, RingElt > (
     // (new face enumerator) Time elapsed to enumerate polytope faces: 605.019797ms
 
     let poly_complex_dims               =   Vec::from_iter( poly_complex_bimapsequential.ord_to_val.iter().map(|x| x.dim_cellagnostic().unwrap() ) );    
-      
-    println!("number of polytopes (total): {:?}", poly_complex_bimapsequential.ord_to_val.len() ); 
-    println!("number of polytopes (binned by dimension): {:?}", histogram( poly_complex_dims.iter().cloned() ) );      
+    
+    let num_polytopes_total             =   poly_complex_bimapsequential.ord_to_val.len();
+    let num_polytopes_binned_by_dim     =   histogram( poly_complex_dims.iter().cloned() );
+    println!("number of polytopes (total): {:?}", &num_polytopes_total ); 
+    println!("number of polytopes (binned by dimension): {:?}", &num_polytopes_binned_by_dim );      
 
     let poly_complex_differential           =   polyhedral_boundary_matrix_binary_coeff( & poly_complex_bimapsequential );
    
@@ -423,8 +428,8 @@ pub fn analyze_fibre< RingOp, RingElt > (
                                                     & poly_complex_dims,
                                                     GF2{}
                                                 );  
-    let duration = start.elapsed();   
-    println!("Time elapsed to compute binary-coeff polyhedral betti numbers {:?}", duration);                                                
+    let time_to_compute_poly_betti_nums_over_f2 = start.elapsed();   
+    println!("Time elapsed to compute binary-coeff polyhedral betti numbers {:?}", &time_to_compute_poly_betti_nums_over_f2);                                                
 
 
     let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();         
@@ -485,6 +490,35 @@ pub fn analyze_fibre< RingOp, RingElt > (
         println!("number of nerve dowker complex cells (binned by dimension): {:?}", histogram( dowker_complex_cell_dims.iter().cloned() ));
         println!("betti numbers (of dowker nerve, user-specified ring coefficients): {:?}", &dowker_complex_rank_nullity.rank_homology_vec() );    
     }
+
+    if let Some( save_dir ) = save_dir_opt {
+
+        // let num_facets_total                =   poly_complex_facets.len();
+        // let num_facets_binned_by_dim        =   histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
+        // let num_facets_binned_by_num_verts  =   histogram( poly_complex_facets.iter().map(|x| x.dim_cellagnostic().unwrap() ) );
+        // let time_message_poly_faces = format!("Time elapsed to compute the faces of PH fibre (given the facets): {:?}", duration);   
+        // let num_polytopes_total             =   poly_complex_bimapsequential.ord_to_val.len();
+        // let num_polytopes_binned_by_dim     =   histogram( poly_complex_dims.iter().cloned() );   
+        // let time_to_compute_poly_betti_nums_over_f2 = start.elapsed();      
+        // let poly_complex_betti_vec              =   poly_complex_rank_nullity.rank_homology_vec();              
+
+        // The type of `json_formatted_input` is `serde_json::Value`
+        let json_formatted_analysis = json!({
+            "num_facets_total": num_facets_total,
+            "num_facets_binned_by_dim": num_facets_binned_by_dim,
+            "num_facets_binned_by_num_verts": num_facets_binned_by_num_verts,
+            "time_message_poly_faces": time_message_poly_faces,
+            "num_polytopes_total": num_polytopes_total,
+            "num_polytopes_binned_by_dim": num_polytopes_binned_by_dim,
+            "time_to_compute_poly_betti_nums_over_f2": time_to_compute_poly_betti_nums_over_f2,
+            "poly_complex_betti_vec": poly_complex_betti_vec,
+        });
+
+        let json_string =  serde_json::to_string_pretty( &json_formatted_analysis ).unwrap();          
+        let fp  =  format!("{}{}", save_dir, "/analysis.json");
+        std::fs::write( &fp, json_string).expect("Unable to write file.");                    
+            
+    }    
     
 }                    
 

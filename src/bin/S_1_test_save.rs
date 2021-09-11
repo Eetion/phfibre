@@ -21,7 +21,7 @@ use std::io::Read;
 
 fn main() {
 
-    let save_dir_opt        =   Some("/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s2_autosaves"); // we will not save any files    
+    let save_dir_opt        =   Some("/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s1_test_autosave"); 
 
 
     //  ----------------------------------------------------------------------------------------------    
@@ -31,20 +31,18 @@ fn main() {
     //  Define the base space, barcode, and ring
     
 
-    let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 2); 
+    let complex_facets      =   vec![  vec![0, 1, 2] ];
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1); 
 
     let barcode             =   Barcode{
-                                    inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:2,birth:5} ],
-                                    fin: vec![ BarFinite{dim:0,birth:1,death:2}, BarFinite{dim:1,birth:3,death:4} ],
-                                    ordinal: ordinate_unique_vals( & vec![ 0, 1, 2, 3, 4, 5 ] ),
+                                    inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:3} ],
+                                    fin: vec![ BarFinite{dim:0,birth:1,death:2} ],
+                                    ordinal: ordinate_unique_vals( & vec![ 0, 1, 2, 3 ] ),
                                 };
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
     let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
-
-    println!("\n\n2-SKELETON, BARCODE:(0, [0,INF)), (0, [1,2)), (1, [3,4)), (2, [5,INF))");
 
     let poly_complex_facets =   simplex_pipeline(
                                     &   simplex_sequence,
@@ -54,18 +52,6 @@ fn main() {
                                         false, // do not analyze the dowker dual to the nerve complex
                                         save_dir_opt,
                                 );  
-
-
-    //  SAVE RESULTS
-    let json_string         =   serde_json::to_string(&poly_complex_facets ).unwrap();  
-    let filepath            =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s2_bars4.json";
-    std::fs::write( &filepath, json_string ).expect("Unable to write file.");  
-
-    let mut data = String::new();
-    let mut file = std::fs::File::open( &filepath ).expect("Unable to open file");
-    file.read_to_string( &mut data ).unwrap();
-    let recovered: Vec< Polytope > = serde_json::from_str( &data ).unwrap();
-    assert_eq!( &recovered, &poly_complex_facets );
 
     //  ANALYZE    
 
