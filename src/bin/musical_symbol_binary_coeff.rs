@@ -34,7 +34,7 @@ fn main() {
                                     ordinal: ordinate_unique_vals( & vec![0, 1, 2] ),
                                 };
 
-    let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new(); // this just defines the rational numbers
+    let ring                =   solar::rings::field_prime::GF2{};
 
     let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
     let analyze_dowker_dual =   true;
@@ -56,31 +56,30 @@ fn main() {
             ring.clone(),
             analyze_dowker_dual,
             save_dir_opt,
-    );   
-
+    ); 
 
     //  RESULTS
     //  -------
 
     // BASE SPACE
     // simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [1, 2], [2, 3]]
+    // BARCODE
+    // barcode: Barcode { inf: [BarInfinite { dim: 0, birth: 0 }, BarInfinite { dim: 1, birth: 2 }], fin: [BarFinite { dim: 0, birth: 0, death: 1 }], ordinal: BiMapSequential { ord_to_val: [0, 1, 2], val_to_ord: {0: 0, 1: 1, 2: 2} } }
+    // TIME TO COMPUTE FIBRE FACETS
+    // Time elapsed to compute facets of PH fibre: 18.321374ms
+    
+    // ANALYSIS
+    // Each polytope facet has been checked for compatiblity with the given barcode.
     // POLYHEDRAL COMPLEX FACETS
     // number of facets (total): 104
     // number of facets (binned by dimension): [0, 0, 104]
     // number of facets (binned by number of vertices): [0, 0, 104]
     // POLYHEDRAL COMPLEX CELLS
+    // "Time elapsed to compute the faces of PH fibre (given the facets): 2.823198ms"
     // number of polytopes (total): 393
     // number of polytopes (binned by dimension): [92, 197, 104]
-    // betti numbers (of polyhedral complex): [1, 2, 0]
-    // INTERSECTIONS
-    // number of pairs of intersecting facets, binned by the dimension of the intersection polytope: [271, 161, 0]
-    // DOWKER NERVE COMPLEX FACETS
-    // number of dowker nerve complex facets (total): 104
-    // number of dowker nerve complex facets (binned by dimension): [0, 0, 58, 46]
-    // DOWKER NERVE COMPLEX CELLS
-    // number of nerve dowker complex cells (total): 669
-    // number of nerve dowker complex cells (binned by dimension): [92, 289, 242, 46]
-    // betti numbers (of dowker nerve): [1, 2, 0, 0]
+    // Time elapsed to compute binary-coeff polyhedral betti numbers 224.662µs
+    // betti numbers (of polyhedral complex, Z2 coefficients): [1, 2, 0]
 
 
 }
