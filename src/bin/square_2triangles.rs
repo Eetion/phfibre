@@ -10,7 +10,7 @@ use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::polytope::object_def::{Polytope};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 
 use std::io::Read;
 

@@ -1,6 +1,6 @@
 use crate::polytope::object_def::Polytope;
 use crate::polytope::faces::poly_faces;
-use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
 use solar::utilities::sequences_and_ordinals::{BiMapSequential};
 
 

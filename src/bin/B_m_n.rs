@@ -9,7 +9,7 @@ use phfibre::intervals_and_ordinals::{Barcode, BarFinite, BarInfinite};
 use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::ConditionNone;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 
 
 //  CODE

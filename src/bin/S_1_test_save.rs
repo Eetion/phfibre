@@ -8,7 +8,7 @@ use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use phfibre::polytope::object_def::Polytope;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
 use std::iter::FromIterator;
 
 use std::io::Read;
@@ -62,7 +62,6 @@ fn main() {
             analyze_dowker_dual,
             save_dir_opt,
     );   
-    
     
 
 

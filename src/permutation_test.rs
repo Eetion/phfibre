@@ -6,12 +6,12 @@ use crate::polytope::object_def::Polytope;
 use crate::utilities::simplices_with_relabeled_vertices;
 use solar::utilities::indexing_and_bijection::{compose_f_after_g, inverse_perm};
 use solar::utilities::sequences_and_ordinals::BiMapSequential;
-use solar::cell_complexes::simplices_unweighted::facets::{    
+use solar::utilities::cell_complexes::simplices_unweighted::facets::{    
     ordered_subsimplices_up_thru_dim_concatenated_vec, 
 }; 
-use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+use solar::utilities::cell_complexes::simplices_unweighted::boundary_matrices::{    
     boundary_matrix_from_complex_facets     }; 
-use solar::cell_complexes::simplices_unweighted::simplex::{    
+use solar::utilities::cell_complexes::simplices_unweighted::simplex::{    
     simplex_perm_o2n_from_vertex_perm_o2n   }; 
 use solar::rings::ring::{Semiring, Ring, DivisionRing};    
 use num::rational::Ratio;

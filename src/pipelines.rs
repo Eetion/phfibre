@@ -9,8 +9,8 @@ use crate::polytope::nerve::dowker_nerve_complex_facets;
 use crate::rank_calculations::chain_cx_rank_nullity;
 use solar::utilities::sequences_and_ordinals::{BiMapSequential};
 use solar::utilities::statistics::histogram;
-use solar::cell_complexes::simplices_unweighted::facets::{ ordered_subsimplices_up_thru_dim_concatenated_vec}; 
-use solar::cell_complexes::simplices_unweighted::boundary_matrices::{boundary_matrix_from_complex_facets};   
+use solar::utilities::cell_complexes::simplices_unweighted::facets::{ ordered_subsimplices_up_thru_dim_concatenated_vec}; 
+use solar::utilities::cell_complexes::simplices_unweighted::boundary_matrices::{boundary_matrix_from_complex_facets};   
 use solar::rings::field_prime::GF2;
 use solar::rings::ring::{Semiring, Ring, DivisionRing};
 use std::collections::HashMap;
@@ -32,10 +32,10 @@ type F  =   num::rational::Ratio<i64>;
 // use crate::phfibre::{Node, explore};
 // use crate::intervals_and_ordinals::{Barcode, BarcodeInverse};
 // use crate::polytope::object_def::Polytope;
-// use solar::cell_complexes::simplices_unweighted::facets::{    
+// use solar::utilities::cell_complexes::simplices_unweighted::facets::{    
 //     ordered_subsimplices_up_thru_dim_concatenated_vec 
 // }; 
-// use solar::cell_complexes::simplices_unweighted::boundary_matrices::{    
+// use solar::utilities::cell_complexes::simplices_unweighted::boundary_matrices::{    
 //     boundary_matrix_from_complex_facets 
 // };   
 // use ordered_float::OrderedFloat;
