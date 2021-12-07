@@ -123,7 +123,7 @@ pub fn  chain_cx_rank_nullity< RingOp, RingElt >(
     let mut reducindus          =   boundary.clone();
 
     // reduce the copy
-    solar::matrix_reduction::vec_of_vec::right_reduce(
+    solar::matrix_factorization::vec_of_vec::right_reduce(
         &mut reducindus,
         ring
     );
@@ -288,7 +288,7 @@ mod tests {
         let mut reducindus          =   boundary.clone();
 
         // reduce the copy
-        solar::matrix_reduction::vec_of_vec::right_reduce(
+        solar::matrix_factorization::vec_of_vec::right_reduce(
             &mut reducindus,
             ring.clone(),
         );    

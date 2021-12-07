@@ -3,7 +3,7 @@ use crate::utilities::*;
 use crate::intervals_and_ordinals::{Barcode, BarcodeInverse, BarFinite, BarInfinite, LevelSetSizes, pairs_dims_births_to_barcode};
 use crate::polytope::object_def::{Polytope};
 use crate::rank_calculations::{reduced_mat_to_pivot_index_pairs, chain_cx_rank_nullity, num_degenerate_bars_per_degree};
-use solar::matrix_reduction::vec_of_vec::{clear_cols};
+use solar::matrix_factorization::vec_of_vec::{clear_cols};
 use solar::utilities::indexing_and_bijection::{SuperVec, SuperIndex, sort_perm, inverse_perm};
 use solar::utilities::sequences_and_ordinals::{BiMapSequential, ordinate_unique_vals};
 use solar::utilities::statistics::histogram;
@@ -1151,7 +1151,7 @@ pub fn  is_barcode_compatible< FilRaw, RingOp, RingElt, PreconditionToMakeNewLev
     }
 
     // reduce
-    solar::matrix_reduction::vec_of_vec::right_reduce(
+    solar::matrix_factorization::vec_of_vec::right_reduce(
         &mut reducindus_permuted,
         root_node.ring.clone(),
     );    
