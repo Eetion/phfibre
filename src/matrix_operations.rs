@@ -9,24 +9,3 @@ use std::iter::IntoIterator;
 
 type Key = usize;
 type Val = Ratio< i64 >;
-
-
-
-pub fn column_pivot<I,R>(   matrix:             Vec< Vec< ( Key, Val ) > >,
-                            piv_col:            Vec< ( Key, Val ) >,
-                            red_col_indices:    I,
-                            ring:               R
-                        ) 
-    where I : IntoIterator< Item = Key >,
-          R : Semiring<Val> + Ring<Val> + DivisionRing<Val>
-{
-
-    if piv_col.is_empty() { println!("Error in <column_pivot>: empty pivot column "); return }
-
-    let piv_row_ind     =   piv_col.len() - 1;
-
-    if ring.is_0(    piv_col[ piv_row_ind ].1    )
-    {
-        println!("Error in <column_pivot>: lowest structural entry is zero"); return
-    }
-}
