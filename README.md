@@ -140,7 +140,4 @@ Each experiment reported in the paper has a corresponding source file in the cur
 - consider moving away from notation \sigma_b
 - don't pre-assign a class to be critical versus non-critical
 - merge barcode search
->>>>>>> dev_greg
-=======
 - is it a manifold?
->>>>>>> dev_greg
