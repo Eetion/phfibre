@@ -101,43 +101,4 @@ Each experiment reported in the paper has a corresponding source file in the cur
 
 # Notes for the developers
 
-
-## To-do
-
-
-- (for use on cluster) function to export data in two files: (i) (the minimum needed to recover results) the input complex, the barcode, the coefficient ring, and the facets of the fibre, (ii) the interesting statistics (as reported by the analysis function)
-- turn B_m_n.rs into a unit test
-- typically the number of vertices is very small, compared to the number of cells in the complex; one could either try to enumerate vertices first, then either use this information to dramatically cut down the search space for higher dimensinoal polytopes, or attempt to evaluate the truth/falsehood of the statement (this set of vertices is contained within a polytope) directly, in order to construct the dowker dual to the nerve complex
-- parallelization
-- add test to check whether a given cycle must have infinite or finite lifespan
-- try exporting to Poly-make
-- (NOW, UPON REFLECTION, I THINK WE HAVE TO BE CAREFUL ABOUT WHETHER THIS IS TRULY WELL-FOUNDED, MATHEMATICALLY) ADD A SCREENER FOR WHETHER A NEW POSTIVE CELL SHOULD HAVE FINITE OR INFINITE LIFE
-
-
-## Examples (try later)
-
-- homotopy collapse
-- performance for antitranspose calculation
-- reproduce examples from theory paper
-- tree + sphere
-- variants for a single space
-    * how do fibres for different barcodes compare? 
-    * effect of gluing two complexes?
-    * is fibre null-homologous?
-- restrict to lower star filtrations
-- (a seemingly reliable option) report some statistics for parametrized or random family of space
-
-## Statistics to consider
-
-- betti numbers
-- number of cells in each dimension
-- computation time / memory
-<<<<<<< HEAD
-- is it a manifold?
-
-## Paper
-
-- consider moving away from notation \sigma_b
-- don't pre-assign a class to be critical versus non-critical
-- merge barcode search
-- is it a manifold?
+See the file `README.md` in the branch `dev_greg` for notes which may be relevant to researchers in this area and code developers.
