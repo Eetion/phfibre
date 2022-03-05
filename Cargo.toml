@@ -16,5 +16,3 @@ rand = "0.8.3"
 auto_impl = "0.4.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.42"
-# indicatif = "0.16.2"
-# exhact = { path = "/Users/gh10/a/c/pr/xh/r/git" }

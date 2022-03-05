@@ -12,7 +12,7 @@ Welcome!  This is the git repository for the paper  [Algorithmic Reconstruction 
   git checkout 241343ee54bfe63624eb5a07b95da97f55832603
   ```
   * alternatively, you can find a copy of the correct version of  `SOLAR` in the present repository, under `dependencies/SOLAR` (it is a git repo with the main branch checked out; that is the correct branch and version)).
-* The present repo contains a file called `Cargo.toml`.  In your cloned copy, update the file paths for `SOLAR` so that Rust will know where to look in your computer for this code.
+* The present repo contains a file called `Cargo.toml`.  In your cloned copy, update the file path for `SOLAR` so that Rust will know where to find this code.
 
 # How to run
 

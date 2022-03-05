@@ -1,0 +1,3 @@
+[submodule "dependencies/SOLAR"]
+	path = dependencies/SOLAR
+	url = https://github.com/ExHACT/SOLAR.git
