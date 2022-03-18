@@ -10,7 +10,7 @@ use phfibre::hasse_strategy::pipeline_vertex_only::{simplex_pipeline_vertex_only
 use phfibre::polytope::object_def::{Polytope};
 use phfibre::hasse_strategy::compute_vertex_only::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
 
 use std::io::Read;
 

@@ -8,7 +8,7 @@ use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use phfibre::polytope::object_def::Polytope;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
 use std::iter::FromIterator;
 
 use std::io::Read;
@@ -21,18 +21,17 @@ use std::io::Read;
 
 fn main() {
 
-    let save_dir_opt        =   Some("/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s1_test_autosave"); 
+  let save_dir_opt        = None;
 
-
-    //  ----------------------------------------------------------------------------------------------    
+    //  ----------------------------------------------------------------------------------------------
     //  2-SKELETON OF 3-SIMPLEX, 1 FINITE BAR IN DIM 0, 1 FINITE BAR IN DIM 1
     //  ----------------------------------------------------------------------------------------------
 
     //  Define the base space, barcode, and ring
-    
+
 
     let complex_facets      =   vec![  vec![0, 1, 2] ];
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1); 
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 1);
 
     let barcode             =   Barcode{
                                     inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:1,birth:3} ],
@@ -42,7 +41,7 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
-    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
+    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build
 
     let poly_complex_facets =   simplex_pipeline(
                                     &   simplex_sequence,
@@ -51,28 +50,29 @@ fn main() {
                                     &   precondition_to_make_new_lev_set_lower_none,
                                         false, // do not analyze the dowker dual to the nerve complex
                                         save_dir_opt,
-                                );  
+                                );
 
-    //  ANALYZE    
+    //  ANALYZE
 
     let analyze_dowker_dual =   false;
-    analyze_fibre( 
+    analyze_fibre(
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
             save_dir_opt,
-    );   
-    
+    );
 
 
 
 
-    
+
+
+
 }
 
 
 //  SPECIAL CASE (COMPUTED DOWKER NERVE FACET DIMENSIONS BUT MEMORY USE WAS 26 GB BEFORE I STOPPED THE PROCESS FOR COMPUTING BETTI NUMBERS)
-// --------------------------------------------------------------------------------------------- 
+// ---------------------------------------------------------------------------------------------
 // BASE SPACE
 // simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
 // BARCODE

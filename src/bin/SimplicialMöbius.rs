@@ -20,7 +20,6 @@ use solar::utilities::sequences_and_ordinals::{ordinate_unique_vals, BiMapSequen
 use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
 use std::iter::FromIterator;
 
-
 //  CODE
 
 fn main() {
@@ -63,7 +62,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-    /*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -74,17 +73,16 @@ fn main() {
                                 &   ring,
                             &   precondition_to_make_new_lev_set_lower_none,
                                     analyze_dowker_dual,
-                                    save_dir_opt,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-        */
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
@@ -95,17 +93,17 @@ fn main() {
                                     &   barcode,
                                     &   ring,
                                     &   precondition_to_make_new_lev_set_lower_star,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
-                            );
+                                    analyze_dowker_dual,
+                                    save_dir_opt
+                                );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
     // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH ONE FINITE BAR ------------
 
@@ -132,7 +130,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-    /*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -140,20 +138,20 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt,
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-   */
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
+
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
 
@@ -163,17 +161,17 @@ fn main() {
                                     &   barcode,
                                     &   ring,
                                     &   precondition_to_make_new_lev_set_lower_star,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
-                            );
+                                    analyze_dowker_dual,
+                                    save_dir_opt
+                                );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
 
     // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH TWO DISJOINT FINITE BARS ------------
@@ -201,7 +199,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-/*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -209,22 +207,20 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt,
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
-
-
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-*/
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
+
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
 
@@ -234,17 +230,17 @@ fn main() {
                                     &   barcode,
                                     &   ring,
                                     &   precondition_to_make_new_lev_set_lower_star,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
-                            );
+                                    analyze_dowker_dual,
+                                    save_dir_opt
+                                );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
         // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH TWO OVERLAPPING FINITE BARS ------------
 
@@ -271,7 +267,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-    /*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -279,20 +275,19 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt,
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-        */
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
@@ -303,17 +298,17 @@ fn main() {
                                     &   barcode,
                                     &   ring,
                                     &   precondition_to_make_new_lev_set_lower_star,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
-                            );
+                                    analyze_dowker_dual,
+                                    save_dir_opt
+                                );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
         // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH 1 FINITE BAR IN ANOTHER ------------
 
     //  Define the base space, barcode, and ring
@@ -339,7 +334,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-    /*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -347,20 +342,19 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt,
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-        */
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
     //  LOWER STAR
     //  -------------------------------------------------------------------------------------------
@@ -371,17 +365,17 @@ fn main() {
                                     &   barcode,
                                     &   ring,
                                     &   precondition_to_make_new_lev_set_lower_star,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
-                            );
+                                    analyze_dowker_dual,
+                                    save_dir_opt
+                                );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
          // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH 3 DISJOINT FINITE BARS------------
 
@@ -408,7 +402,7 @@ fn main() {
 
     let analyze_dowker_dual                             =   false;
 
-    /*
+
     //  UNCONSTRAINED FILTRATION
     //  -------------------------------------------------------------------------------------------
 
@@ -416,21 +410,19 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt,
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
-
-        */
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
      // -------------------- SIMPLICIAL MOBIUS BAND, BARCODE WITH 3 CONSECUTIVE TOUCHING FINITE BARS------------
 
@@ -465,18 +457,18 @@ fn main() {
     let poly_complex_facets =       simplex_pipeline(
                                     &   simplex_sequence,
                                     &   barcode,
-                                    &   ring,
-                                    &   precondition_to_make_new_lev_set_lower_none,
-                                        analyze_dowker_dual,
-                                        save_dir_opt
+                                &   ring,
+                            &   precondition_to_make_new_lev_set_lower_none,
+                                    analyze_dowker_dual,
+                                    save_dir_opt
                                 );
 
     let analyze_dowker_dual =   false;
     analyze_fibre(
-            &   poly_complex_facets,
-                ring.clone(),
-                analyze_dowker_dual,
-                save_dir_opt,
-        );
+    &   poly_complex_facets,
+        ring.clone(),
+        analyze_dowker_dual,
+        save_dir_opt,
+    );
 
 }

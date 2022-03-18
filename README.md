@@ -55,7 +55,7 @@ cargo run --bin I_m --release
 # Experiments reported in the paper
 
 
-Each experiment reported in the paper has a corresponding source file in the current repository, under `srce/bin/`.  Specifically, 
+Each experiment reported in the paper has a corresponding source file in the current repository, under `srce/bin/`.  For example, 
 
 - the interval subdivided into several 0- and 1-simplies (`I_m.rs`)
 - the torus (`SimplicialTorus.rs`)

@@ -8,7 +8,7 @@ use phfibre::pipelines::{simplex_pipeline, analyze_fibre};
 use phfibre::phfibre::{ConditionNone, ConditionLowerStar, ConditionLowerEdge};
 use phfibre::polytope::object_def::Polytope;
 use solar::utilities::sequences_and_ordinals::ordinate_unique_vals;
-use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec; 
+use solar::utilities::cell_complexes::simplices_unweighted::facets::ordered_subsimplices_up_thru_dim_concatenated_vec;
 use std::iter::FromIterator;
 
 use std::io::Read;
@@ -21,18 +21,18 @@ use std::io::Read;
 
 fn main() {
 
-    let save_dir_opt        =   Some("/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s2_autosaves"); // we will not save any files    
+  let save_dir_opt        = None;
 
 
-    //  ----------------------------------------------------------------------------------------------    
+    //  ----------------------------------------------------------------------------------------------
     //  2-SKELETON OF 3-SIMPLEX, 1 FINITE BAR IN DIM 0, 1 FINITE BAR IN DIM 1
     //  ----------------------------------------------------------------------------------------------
 
     //  Define the base space, barcode, and ring
-    
+
 
     let complex_facets      =   vec![  vec![0, 1, 2, 3] ];
-    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 2); 
+    let simplex_sequence    =   ordered_subsimplices_up_thru_dim_concatenated_vec( &complex_facets, 2);
 
     let barcode             =   Barcode{
                                     inf: vec![ BarInfinite{dim:0,birth:0}, BarInfinite{dim:2,birth:5} ],
@@ -42,7 +42,7 @@ fn main() {
 
     let ring                =   solar::rings::ring_native::NativeDivisionRing::< num::rational::Ratio<i64> >::new();
 
-    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build    
+    let precondition_to_make_new_lev_set_lower_none     =   ConditionNone{};      // this struct won't impose any extra conditions on the filtrations we build
 
     println!("\n\n2-SKELETON, BARCODE:(0, [0,INF)), (0, [1,2)), (1, [3,4)), (2, [5,INF))");
 
@@ -53,13 +53,13 @@ fn main() {
                                     &   precondition_to_make_new_lev_set_lower_none,
                                         false, // do not analyze the dowker dual to the nerve complex
                                         save_dir_opt,
-                                );  
+                                );
 
 
     //  SAVE RESULTS
-    let json_string         =   serde_json::to_string(&poly_complex_facets ).unwrap();  
+    let json_string         =   serde_json::to_string(&poly_complex_facets ).unwrap();
     let filepath            =   "/Users/gh10/a/c/pr/xh/pr/phfibre/tmp/s2_bars4.json";
-    std::fs::write( &filepath, json_string ).expect("Unable to write file.");  
+    std::fs::write( &filepath, json_string ).expect("Unable to write file.");
 
     let mut data = String::new();
     let mut file = std::fs::File::open( &filepath ).expect("Unable to open file");
@@ -67,27 +67,27 @@ fn main() {
     let recovered: Vec< Polytope > = serde_json::from_str( &data ).unwrap();
     assert_eq!( &recovered, &poly_complex_facets );
 
-    //  ANALYZE    
+    //  ANALYZE
 
     let analyze_dowker_dual =   false;
-    analyze_fibre( 
+    analyze_fibre(
         &   poly_complex_facets,
             ring.clone(),
             analyze_dowker_dual,
             save_dir_opt,
-    );   
-    
-    
+    );
 
 
 
 
-    
+
+
+
 }
 
 
 //  SPECIAL CASE (COMPUTED DOWKER NERVE FACET DIMENSIONS BUT MEMORY USE WAS 26 GB BEFORE I STOPPED THE PROCESS FOR COMPUTING BETTI NUMBERS)
-// --------------------------------------------------------------------------------------------- 
+// ---------------------------------------------------------------------------------------------
 // BASE SPACE
 // simplices of the base space: [[0], [1], [2], [3], [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3], [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]]
 // BARCODE
