@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Jacob"
+  given-names: "Leygonie"
+  orcid: "https://orcid.org/0000-0000-0000-0000"
+- family-names: "Henselman-Petrusek"
+  given-names: "Gregory"
+  orcid: "https://orcid.org/0000-0002-1889-8272"
+title: "Software Companion to Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes"
+version: 0.0.1
+date-released: 2022-12-28
+url: "https://github.com/Eetion/phfibre"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Jacob"
+    given-names: "Leygonie"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  - family-names: "Henselman-Petrusek"
+    given-names: "Gregory"
+    orcid: "https://orcid.org/0000-0002-1889-8272"
+  doi: "10.48550/ARXIV.2110.14676"
+  journal: "arXiv"
+  title: "Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes"
+  year: 2021
+  url: "https://arxiv.org/abs/2110.14676"
