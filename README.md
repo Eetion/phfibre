@@ -1,4 +1,36 @@
-Welcome!  This is the git repository for the paper  [Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes](https://arxiv.org/abs/2110.14676).  Here you can find source code for the experiments reported in that work.
+Welcome!  
+
+This is the git repository for the paper  [Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes](https://arxiv.org/abs/2110.14676).  Here you can find source code for the experiments reported in that work.
+
+# Bibtex
+
+The preferred citation for this code is the corresponding manuscript; APA format is also available through the "Cite this repository" link, on the right.
+
+```
+@misc{https://doi.org/10.48550/arxiv.2110.14676,
+  doi = {10.48550/ARXIV.2110.14676},
+  url = {https://arxiv.org/abs/2110.14676},
+  author = {Leygonie, Jacob and Henselman-Petrusek, Gregory},
+  keywords = {Computational Geometry (cs.CG), Algebraic Topology (math.AT), FOS: Computer and information sciences, FOS: Computer and information sciences, FOS: Mathematics, FOS: Mathematics},
+  title = {Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes},
+  publisher = {arXiv},
+  year = {2021},
+  copyright = {arXiv.org perpetual, non-exclusive license}
+}
+```
+
+To cite the repository directly:
+
+```
+@software{Jacob_Software_Companion_to_2022,
+author = {Jacob, Leygonie and Henselman-Petrusek, Gregory},
+month = {12},
+title = {{Software Companion to Algorithmic Reconstruction of the Fiber of Persistent Homology on Cell Complexes}},
+url = {https://github.com/Eetion/phfibre},
+version = {0.0.1},
+year = {2022}
+}
+```
 
 
 # How to install
