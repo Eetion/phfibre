@@ -3,7 +3,7 @@ message: "If you use this software, please cite it as below."
 authors:
 - family-names: "Jacob"
   given-names: "Leygonie"
-  orcid: "https://orcid.org/0000-0000-0000-0000"
+  orcid: "https://orcid.org/0000-0001-6151-1953"
 - family-names: "Henselman-Petrusek"
   given-names: "Gregory"
   orcid: "https://orcid.org/0000-0002-1889-8272"
@@ -16,7 +16,7 @@ preferred-citation:
   authors:
   - family-names: "Jacob"
     given-names: "Leygonie"
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    orcid: "https://orcid.org/0000-0001-6151-1953"
   - family-names: "Henselman-Petrusek"
     given-names: "Gregory"
     orcid: "https://orcid.org/0000-0002-1889-8272"
